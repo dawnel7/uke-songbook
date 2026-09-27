@@ -1,0 +1,8 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#526b4d"><title>Uke Songbook</title><link rel="stylesheet" href="styles.css"></head><body>
+<header><button id="back" class="icon hidden">←</button><b>🎵 Uke Songbook</b><button id="lib" class="headbtn">Library</button></header>
+<main>
+<section id="library"><div class="card"><h1>Your Songbook</h1><p class="sub">Baritone uke · Soprano uke · Guitar</p><input id="search" placeholder="Search songs…"><button id="song" class="song"><b>Hallelujah</b><span>Leonard Cohen · Key of G · Cynthia Lin arrangement</span></button></div>
+<div class="card"><h2>Initial setup</h2><p class="flow">Library → Song → Instrument → Transpose → Chord diagrams</p><p class="muted">Clean starting version. We will add editing, imports, setlists and performance mode after the core workflow is tested.</p></div></section>
+<section id="songPage" class="hidden"><div class="card title"><div><h1>Hallelujah</h1><p class="sub">Leonard Cohen · Cynthia Lin arrangement</p></div><button id="edit" class="btn">Edit</button></div>
+<div class="card controls"><label>Instrument<select id="instrument"><option value="baritone">Baritone Ukulele · DGBE</option><option value="soprano">Soprano Ukulele · GCEA</option><option value="guitar">Guitar · EADGBE</option></select></label><label>Key<select id="key"></select></label><div><button id="down" class="btn">− Transpose</button><button id="up" class="btn">+ Transpose</button><button id="view" class="btn">Page view</button></div></div>
+<div id="chords" class="card chords"></div><div id="lyrics" class="card lyrics"></div></section></main><script src="app.js"></script></body></html>
