@@ -167,7 +167,7 @@ function renderLyrics(s){
 function renderFreeEditor(el,s){
  var h='<div class="editDocument">';
  s.sections.forEach(function(sec,si){
-  h+='<section class="section editSection" data-si="'+si+'"><h3 class="editableSectionName" contenteditable="true" data-si="'+si+'">'+esc(sec.name)+'</h3>';
+  h+='<section class="section editSection" data-si="'+si+'"><div class="editSectionHead"><h3 class="editableSectionName" contenteditable="true" data-si="'+si+'">'+esc(sec.name)+'</h3><button class="editSectionMenu" type="button" aria-label="Section options" data-si="'+si+'">⋯</button></div>';
   sec.lines.forEach(function(l,li){
    h+='<div class="editSongLine" data-si="'+si+'" data-li="'+li+'"><div class="editVisual"><div class="editChordLayer">';
    l.chords.forEach(function(ch,ci){
@@ -242,6 +242,21 @@ function bindFreeEditor(){
   };
  });
 
+ document.querySelectorAll(".editSectionMenu").forEach(function(b){
+  b.onclick=function(e){
+   e.stopPropagation();
+   var si=Number(b.dataset.si),s=currentSong(),choice=prompt("Section options: type ADD to add a new section after this one, or DELETE to remove this section.","");
+   if(!choice)return;
+   choice=choice.trim().toUpperCase();
+   if(choice==="DELETE"){
+    if(s.sections.length===1){alert("A song needs at least one section.");return;}
+    if(confirm("Delete this section and all of its lyrics?")){s.sections.splice(si,1);renderSong();}
+   }else if(choice==="ADD"){
+    s.sections.splice(si+1,0,{name:"New section",lines:[line("",[])]});renderSong();
+   }
+  };
+ });
+ 
  document.querySelectorAll(".editableSectionName").forEach(function(h){
   h.addEventListener("input",function(){
    currentSong().sections[Number(h.dataset.si)].name=plainEditableText(h);
