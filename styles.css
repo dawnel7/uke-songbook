@@ -21,3 +21,19 @@
 .editWords:focus{border-bottom-color:var(--green)}
 .editWords.dropReady{background:#f2f6ef;border-radius:4px}
 @media(max-width:750px){.editSectionMenu{opacity:.45}}
+
+/* Word-document style song editor */
+.wordEditToolbar{display:flex;align-items:center;gap:14px;margin:0 0 14px;padding:0 0 10px;border-bottom:1px solid var(--line)}
+.wordEditHint{font-size:13px;color:var(--muted)}
+.wordDocument{font-size:19px}
+.wordLine{margin:0 0 15px}
+.wordLineInner{position:relative;padding-top:1.25em;min-height:2.1em}
+.wordChordLayer{position:absolute;left:0;right:0;top:0;height:1.3em;pointer-events:none}
+.wordChord{position:absolute;pointer-events:auto;color:var(--green);font-weight:850;font-size:.9em;line-height:1;white-space:nowrap;cursor:grab;user-select:none}
+.wordChord.selected{background:#e8eee5;border-radius:4px;outline:1px solid var(--green);padding:1px 3px}
+.wordChord.dragging{opacity:.5}
+.wordLyrics{position:relative;z-index:1;min-height:1.45em;padding:0;outline:none;border-bottom:1px dashed transparent;background:transparent;font-size:inherit;line-height:inherit;white-space:pre-wrap}
+.wordLyrics:focus{border-bottom-color:var(--green)}
+.wordLyrics.dropReady{background:#f2f6ef;border-radius:4px}
+.editableSectionName{outline:none}
+@media(max-width:750px){.wordEditToolbar{align-items:flex-start;flex-direction:column;gap:5px}}
