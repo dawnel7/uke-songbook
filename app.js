@@ -1,18 +1,62 @@
 const S=(()=>{try{return JSON.parse(localStorage.getItem("ukeSongbookState"))||{}}catch(e){return {}}})();
-S.inst=S.inst||"baritone";S.shift=Number.isInteger(S.shift)?S.shift:0;S.page=!!S.page;S.edits=S.edits||{};S.edit=false;
+S.inst=S.inst||"baritone";S.shift=Number.isInteger(S.shift)?S.shift:0;S.page=!!S.page;S.edits=S.edits||{};S.chords=S.chords||{};S.edit=false;
 const notes=["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
 const shapes={baritone:{G:[0,0,0,3],Em:[0,3,4,2],C:[0,0,0,0],D:[2,2,2,0],B:[4,4,4,2]},soprano:{G:[0,2,3,2],Em:[0,4,3,2],C:[0,0,0,3],D:[2,2,2,0],B:[4,4,4,2]},guitar:{G:[3,2,0,0,0,3],Em:[0,2,2,0,0,0],C:[0,3,2,0,1,0],D:[0,0,0,2,3,2],B:[null,2,4,4,4,2]}};
 const sections=[{name:"Intro / Break",lines:[{chords:["G","Em","G","Em"],text:""}]},{name:"Verse 1",lines:[{chords:["G","Em"],text:"Well I've heard there was a secret chord — That David played and it pleased the Lord"},{chords:["C","D"],text:"But you don't really care for music, do you?"},{chords:["G","C","D","Em","C"],text:"Well it goes like this: the fourth, the fifth, the minor fall and the major lift"},{chords:["D","B","Em","Em"],text:"The baffled king composing Halle-lujah"}]},{name:"Chorus",lines:[{chords:["C","C","Em","Em"],text:"Halle-lujah Halle-lujah"},{chords:["C","C","G","D","G","Em","G","Em"],text:"Halle-lu-u-jah"}]}];
-function persist(){localStorage.setItem("ukeSongbookState",JSON.stringify({inst:S.inst,shift:S.shift,page:S.page,edits:S.edits}))}
-function commitEdits(){document.querySelectorAll(".words-line[data-line]").forEach(el=>{S.edits[el.dataset.line]=el.innerText});persist()}
+
+function persist(){localStorage.setItem("ukeSongbookState",JSON.stringify({inst:S.inst,shift:S.shift,page:S.page,edits:S.edits,chords:S.chords}))}
+function esc(v){return String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
+function wordsFor(line){return (line.text||"").trim().split(/\s+/).filter(Boolean)}
+function chordItems(line,key){
+ if(Array.isArray(S.chords[key]))return S.chords[key];
+ const w=wordsFor(line),n=line.chords.length;
+ return line.chords.map((name,i)=>({name,pos:n<=1?0:Math.round(i*(Math.max(0,w.length-1))/(n-1))}));
+}
+function commitEdits(){
+ document.querySelectorAll(".words-line[data-line]").forEach(el=>S.edits[el.dataset.line]=el.innerText);
+ document.querySelectorAll(".chord-editor[data-line]").forEach(row=>{
+  const key=row.dataset.line,items=[...row.querySelectorAll(".chord-item")].map(x=>({
+   name:x.querySelector(".chord-name").value.trim()||"C",
+   pos:Number(x.querySelector(".chord-pos").value)||0
+  }));
+  S.chords[key]=items;
+ });
+ persist();
+}
 function transpose(c,n){let m=c.match(/^(C#|D#|F#|G#|A#|[A-G])(m)?(7)?$/);if(!m)return c;let i=notes.indexOf(m[1]);if(i<0)return c;return notes[(i+n+120)%12]+(m[2]||"")+(m[3]||"")}
-function uniqueChords(){let all=[];sections.forEach(s=>s.lines.forEach(l=>l.chords.forEach(c=>{if(!all.includes(c))all.push(c)})));return all}
+function uniqueChords(){let all=[];sections.forEach(s=>s.lines.forEach((l,si)=>{let a=chordItems(l,si+"-"+0);a.forEach(x=>{if(!all.includes(x.name))all.push(x.name)})}));return all}
 function diagram(name){const f=shapes[S.inst][name];if(!f)return "";return `<div class="fingering">${f.map(v=>v==null?"×":v).join(" ")}</div>`}
-function renderChordStrip(){document.querySelector("#chords").innerHTML=uniqueChords().map(n=>{const x=transpose(n,S.shift);return `<div class="chordbox"><div class="chordname">${x}</div>${diagram(n)}</div>`}).join("")}
-function renderLine(line,si,li){const chordSpans=line.chords.map(c=>`<span class="inline-chord">${transpose(c,S.shift)}</span>`).join("");const key=si+"-"+li;const text=Object.prototype.hasOwnProperty.call(S.edits,key)?S.edits[key]:(line.text||"");return `<div class="song-line"><div class="chord-line">${chordSpans}</div><div class="words-line" data-line="${key}" contenteditable="${S.edit}">${text}</div></div>`}
-function render(){document.querySelector("#key").value=notes[(notes.indexOf("G")+S.shift+12)%12];renderChordStrip();document.querySelector("#lyrics").innerHTML=sections.map((sec,si)=>`<section class="section"><h3>${sec.name}</h3>${sec.lines.map((l,li)=>renderLine(l,si,li)).join("")}</section>`).join("");document.querySelector("#lyrics").className="card lyrics"+(S.page?" pageview":"");document.querySelector("#edit").textContent=S.edit?"Done":"Edit";document.querySelector("#lyrics").style.outline=S.edit?"2px dashed #526b4d":"none"}
+function renderChordStrip(){const names=[];sections.forEach((s,si)=>s.lines.forEach((l,li)=>chordItems(l,si+"-"+li).forEach(x=>{if(x.name&&!names.includes(x.name))names.push(x.name)})));document.querySelector("#chords").innerHTML=names.map(n=>{const x=transpose(n,S.shift);return `<div class="chordbox"><div class="chordname">${esc(x)}</div>${diagram(n)}</div>`}).join("")}
+function renderChordEditor(line,key){
+ const w=wordsFor(line),items=chordItems(line,key);
+ const opts=i=>w.map((word,j)=>`<option value="${j}" ${i===j?"selected":""}>${j+1}: ${esc(word.slice(0,16))}</option>`).join("");
+ return `<div class="chord-editor" data-line="${key}" style="margin:.35rem 0 .6rem;padding:.45rem;border:1px dashed #b8c2b4;border-radius:10px;background:#f7f5ee"><div style="font-size:.8rem;color:#687064;margin-bottom:.35rem">Edit chords — choose the word each chord sits over</div>${items.map((x,i)=>`<div class="chord-item" style="display:flex;gap:.35rem;align-items:center;margin:.3rem 0"><input class="chord-name" value="${esc(x.name)}" style="width:4.2rem;padding:.35rem;border:1px solid #ccc;border-radius:7px"><select class="chord-pos" style="flex:1;padding:.35rem;border:1px solid #ccc;border-radius:7px">${opts(x.pos)}</select><button type="button" class="chord-delete" data-i="${i}" style="padding:.35rem .55rem">×</button></div>`).join("")}<button type="button" class="chord-add" style="margin-top:.25rem;padding:.4rem .65rem">+ Add chord</button></div>`}
+function renderLine(line,si,li){
+ const key=si+"-"+li,text=Object.prototype.hasOwnProperty.call(S.edits,key)?S.edits[key]:(line.text||""),w=wordsFor({text}),items=chordItems(line,key);
+ const byWord={};items.forEach((x,i)=>{const p=Math.max(0,Math.min(w.length-1,Number(x.pos)||0));(byWord[p]??=[]).push({x,i})});
+ const body=w.length?w.map((word,i)=>`<span class="word-cell" style="display:inline-flex;flex-direction:column;vertical-align:top;margin:0 .28em .3em 0;min-width:.5em"><span class="chord-slot" style="display:block;min-height:1.35em;font-weight:700;color:#526b4d">${(byWord[i]||[]).map(o=>esc(transpose(o.x.name,S.shift))).join("  ")}</span><span>${esc(word)}</span></span>`).join(""): "";
+ const editor=S.edit?renderChordEditor({text},key):"";
+ return `<div class="song-line"><div class="chord-line" style="display:none">${items.map(x=>transpose(x.name,S.shift)).join(" ")}</div>${editor}<div class="words-line" data-line="${key}" contenteditable="${S.edit}" style="${S.edit?"min-height:2em":""}">${body}</div></div>`}
+function render(){
+ document.querySelector("#key").value=notes[(notes.indexOf("G")+S.shift+12)%12];
+ renderChordStrip();
+ document.querySelector("#lyrics").innerHTML=sections.map((sec,si)=>`<section class="section"><h3>${sec.name}</h3>${sec.lines.map((l,li)=>renderLine(l,si,li)).join("")}</section>`).join("");
+ document.querySelector("#lyrics").className="card lyrics"+(S.page?" pageview":"");
+ document.querySelector("#edit").textContent=S.edit?"Done":"Edit";
+ document.querySelector("#view").textContent=S.page?"Scroll view":"Page view";
+ document.querySelector("#lyrics").style.outline=S.edit?"2px dashed #526b4d":"none";
+ if(S.edit){
+  document.querySelectorAll(".chord-add").forEach(b=>b.onclick=()=>{const row=b.closest(".chord-editor"),key=row.dataset.line;const line=sections[key.split("-")[0]].lines[key.split("-")[1]],a=chordItems(line,key);a.push({name:"C",pos:0});S.chords[key]=a;render()});
+  document.querySelectorAll(".chord-delete").forEach(b=>b.onclick=()=>{const row=b.closest(".chord-editor"),key=row.dataset.line,line=sections[key.split("-")[0]].lines[key.split("-")[1]],a=chordItems(line,key);a.splice(Number(b.dataset.i),1);S.chords[key]=a;render()});
+ }
+}
 function openSong(){document.querySelector("#library").classList.add("hidden");document.querySelector("#songPage").classList.remove("hidden");document.querySelector("#back").classList.remove("hidden");render()}
 function openLib(){commitEdits();S.edit=false;document.querySelector("#songPage").classList.add("hidden");document.querySelector("#library").classList.remove("hidden");document.querySelector("#back").classList.add("hidden")}
 document.querySelector("#song").onclick=e=>{e.preventDefault();e.stopPropagation();openSong()};document.querySelector("#lib").onclick=openLib;document.querySelector("#back").onclick=openLib;
-document.querySelector("#instrument").onchange=e=>{commitEdits();S.inst=e.target.value;persist();render()};document.querySelector("#up").onclick=()=>{commitEdits();S.shift++;persist();render()};document.querySelector("#down").onclick=()=>{commitEdits();S.shift--;persist();render()};document.querySelector("#view").onclick=()=>{commitEdits();S.page=!S.page;persist();document.querySelector("#view").textContent=S.page?"Scroll view":"Page view";render()};document.querySelector("#edit").onclick=()=>{if(S.edit){commitEdits();S.edit=false}else{S.edit=true}render()};
-notes.forEach(n=>{let o=document.createElement("option");o.value=n;o.textContent=n;document.querySelector("#key").appendChild(o)});document.querySelector("#key").onchange=e=>{commitEdits();S.shift=notes.indexOf(e.target.value)-notes.indexOf("G");persist();render()};document.querySelector("#search").oninput=e=>{document.querySelector("#song").style.display="hallelujah".includes(e.target.value.toLowerCase())?"block":"none"};render();
+document.querySelector("#instrument").onchange=e=>{commitEdits();S.inst=e.target.value;persist();render()};document.querySelector("#up").onclick=()=>{commitEdits();S.shift++;persist();render()};document.querySelector("#down").onclick=()=>{commitEdits();S.shift--;persist();render()};
+document.querySelector("#view").onclick=()=>{commitEdits();S.page=!S.page;persist();render()};
+document.querySelector("#edit").onclick=()=>{if(S.edit)commitEdits();S.edit=!S.edit;render()};
+notes.forEach(n=>{let o=document.createElement("option");o.value=n;o.textContent=n;document.querySelector("#key").appendChild(o)});
+document.querySelector("#key").onchange=e=>{commitEdits();S.shift=notes.indexOf(e.target.value)-notes.indexOf("G");persist();render()};
+document.querySelector("#search").oninput=e=>{document.querySelector("#song").style.display="hallelujah".includes(e.target.value.toLowerCase())?"block":"none"};
+render();
