@@ -126,3 +126,24 @@ body.chordDragging{user-select:none}
 /* Editor toolbar */
 .wordEditActions{display:flex;gap:7px;align-items:center}
 .wordEditActions .btn:disabled{opacity:.4;cursor:default}
+
+
+/* Read-only song display: chord labels sit above their exact lyric position
+   without contributing width or changing the lyric's natural word spacing. */
+.songDocument .displayChord,
+.displayChord{
+  display:inline-block;
+  width:0;
+  margin:0;
+  padding:0;
+  position:relative;
+  top:-1.18em;
+  overflow:visible;
+  white-space:nowrap;
+  color:var(--green);
+  font-weight:850;
+  font-size:.9em;
+  line-height:1;
+  z-index:2;
+  vertical-align:baseline;
+}
