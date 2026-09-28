@@ -82,3 +82,6 @@ body.chordDragging{user-select:none}
 .sectionChord.selected{background:#e8eee5;border:1px solid var(--green);border-radius:4px;padding:1px 3px}
 .sectionChord.dragging{opacity:.45}
 body.chordDragging{user-select:none}
+
+.wordDocLine{user-select:text}
+.sectionChord{user-select:none}
