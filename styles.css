@@ -69,3 +69,16 @@
 .sectionChord.selected{background:#e8eee5;border:1px solid var(--green);border-radius:4px;padding:1px 3px}
 .sectionChord.dragging{opacity:.45}
 body.chordDragging{user-select:none}
+
+.wordEditHint{font-size:13px;color:var(--muted);margin:0 0 12px}
+.wordSectionEditor{position:relative}
+.wordSectionText{position:relative;z-index:1;outline:none;font-size:19px;line-height:1.45}
+.wordSectionText:focus{outline:none}
+.wordDocLine{position:relative;min-height:2.7em;padding-top:1.15em;margin:0;white-space:pre-wrap;box-sizing:border-box}
+.wordDocLine:focus{outline:none}
+.wordSectionText.dropReady{background:#f2f6ef;border-radius:5px}
+.wordSectionChords{position:absolute;z-index:4;left:0;right:0;top:0;bottom:0;pointer-events:none}
+.sectionChord{position:absolute;pointer-events:auto;color:var(--green);font-weight:850;font-size:17px;line-height:1;white-space:nowrap;cursor:grab;user-select:none;background:transparent}
+.sectionChord.selected{background:#e8eee5;border:1px solid var(--green);border-radius:4px;padding:1px 3px}
+.sectionChord.dragging{opacity:.45}
+body.chordDragging{user-select:none}
