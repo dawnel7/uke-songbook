@@ -200,43 +200,42 @@ function bindWordDocument(){
   if(e.key==="Backspace"&&!e.shiftKey){if(mergePreviousIfAtStart(doc)){e.preventDefault();return;}}
   if(e.key==="Delete"&&!e.shiftKey){if(mergeNextIfAtEnd(doc)){e.preventDefault();return;}}
  });
- doc.addEventListener("paste",function(){setTimeout(function(){sanitizePastedDoc(doc);syncWordDocument(doc);},0);});
- doc.querySelectorAll(".docChord").forEach(function(chip){bindDocChord(chip,doc);});
- var add=document.getElementById("insertChordBtn");if(add)add.onclick=function(){insertChordAtCaret(doc);};
-}
-function bindDocChord(chip,doc){
- chip.addEventListener("click",function(e){
-  e.stopPropagation();
-  var r=document.createRange();r.selectNodeContents(chip);
-  var sel=window.getSelection();sel.removeAllRanges();sel.addRange(r);doc.focus();
- });
- chip.addEventListener("keydown",function(e){
-  if(e.key==="Enter"){e.preventDefault();e.stopPropagation();chip.blur();doc.focus();}
- });
- chip.addEventListener("pointerdown",function(e){
-  if(e.button!==0)return;
-  e.preventDefault();e.stopPropagation();
+ doc.addEventListener("paste",function(){setTimeout(function(){sanitizePastedDoc(doc);syncWordDocument(doc);bindPastedChords(doc);},0);});
+ doc.addEventListener("pointerdown",function(e){
+  var chip=e.target.closest&&e.target.closest(".docChord");if(!chip||e.button!==0)return;
   window.__docChordDrag={chip:chip,startX:e.clientX,startY:e.clientY,moved:false};
   chip.classList.add("docChordPending");
   window.addEventListener("pointermove",onDocChordMove);
   window.addEventListener("pointerup",onDocChordUp,{once:true});
  });
+ doc.addEventListener("dblclick",function(e){
+  var chip=e.target.closest&&e.target.closest(".docChord");if(!chip)return;
+  e.preventDefault();e.stopPropagation();
+  var r=document.createRange();r.selectNodeContents(chip);
+  var sel=window.getSelection();sel.removeAllRanges();sel.addRange(r);doc.focus();
+ });
+ var add=document.getElementById("insertChordBtn");if(add)add.onclick=function(){insertChordAtCaret(doc);};
+}
+function bindPastedChords(doc){
+ doc.querySelectorAll(".docChord").forEach(function(chip){chip.contentEditable="true";chip.spellcheck=false;});
 }
 function onDocChordMove(e){
  var d=window.__docChordDrag;if(!d)return;
- if(Math.hypot(e.clientX-d.startX,e.clientY-d.startY)>4)d.moved=true;
- if(d.moved)d.chip.style.transform="translate("+(e.clientX-d.startX)+"px,"+(e.clientY-d.startY)+"px)";
+ if(Math.hypot(e.clientX-d.startX,e.clientY-d.startY)>5){
+  d.moved=true;
+  e.preventDefault();
+  d.chip.classList.remove("docChordPending");
+  d.chip.classList.add("dragging");
+  d.chip.style.transform="translate("+(e.clientX-d.startX)+"px,"+(e.clientY-d.startY)+"px)";
+ }
 }
 function onDocChordUp(e){
  var d=window.__docChordDrag;if(!d)return;
  window.removeEventListener("pointermove",onDocChordMove);
- d.chip.classList.remove("docChordPending");
+ d.chip.classList.remove("docChordPending","dragging");
  d.chip.style.transform="";
  window.__docChordDrag=null;
- if(!d.moved){
-  var r=document.createRange();r.selectNodeContents(d.chip);
-  var sel=window.getSelection();sel.removeAllRanges();sel.addRange(r);d.chip.closest(".songDocument").focus();return;
- }
+ if(!d.moved)return;
  var doc=d.chip.closest(".songDocument"),range=caretRangeIn(doc,e.clientX,e.clientY);if(!range)return;
  if(range.startContainer===d.chip||d.chip.contains(range.startContainer))return;
  d.chip.remove();
