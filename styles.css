@@ -97,3 +97,28 @@ body.chordDragging{user-select:none}
 .docChord.dragging{opacity:.45}
 body.chordDragging{user-select:none}
 @media(max-width:750px){.wordEditToolbar{align-items:flex-start}.wordEditToolbar span{max-width:75%}}
+
+/* Final inline chord behavior: chords visually sit above their anchor without taking lyric width */
+.songDocument .docChord{
+  display:inline-block;
+  width:0;
+  margin-right:0;
+  position:relative;
+  top:-1.18em;
+  overflow:visible;
+  white-space:nowrap;
+  color:var(--green);
+  font-weight:850;
+  font-size:.9em;
+  line-height:1;
+  cursor:text;
+  user-select:text;
+  z-index:3;
+}
+.songDocument .docChord:focus{
+  outline:1px solid var(--green);
+  background:#e8eee5;
+  border-radius:3px;
+}
+.songDocument .docChord.dragging{cursor:grabbing;opacity:.5}
+.songDocument .docChordPending{cursor:grab}
