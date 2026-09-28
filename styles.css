@@ -82,3 +82,18 @@ body.chordDragging{user-select:none}
 .sectionChord.selected{background:#e8eee5;border:1px solid var(--green);border-radius:4px;padding:1px 3px}
 .sectionChord.dragging{opacity:.45}
 body.chordDragging{user-select:none}
+
+/* Inline Word-like chord editor */
+.wordEditToolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 14px;padding:0 0 10px;border-bottom:1px solid var(--line)}
+.wordEditToolbar span{color:var(--muted);font-size:13px}
+.songDocument{font-size:19px;line-height:1.45;outline:none}
+.docSection{margin-bottom:27px;break-inside:avoid}
+.docSectionHeading{font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:800;margin:0 0 8px;outline:none}
+.docLine{position:relative;min-height:3.15em;padding-top:1.12em;margin:0;white-space:pre-wrap;outline:none;box-sizing:border-box}
+.docLine:focus{outline:none}
+.docChord{display:inline-block;position:relative;top:-1.18em;margin-right:-.9em;color:var(--green);font-weight:850;font-size:.9em;line-height:1;white-space:nowrap;cursor:grab;user-select:text;z-index:3}
+.docChord:focus{outline:1px solid var(--green);background:#e8eee5;border-radius:3px}
+.docChordPending{opacity:.45}
+.docChord.dragging{opacity:.45}
+body.chordDragging{user-select:none}
+@media(max-width:750px){.wordEditToolbar{align-items:flex-start}.wordEditToolbar span{max-width:75%}}
