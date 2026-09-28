@@ -41,7 +41,7 @@
 /* Unified Word-like document editor */
 .wordDocument{font-size:19px;line-height:1.45}
 .wordSectionBody{outline:none;min-height:1.5em}
-.wordDocLine{min-height:1.45em;margin:0 0 15px;white-space:pre-wrap;outline:none}
+.wordDocLine{position:relative;min-height:3.25em;padding-top:1.25em;margin:0;white-space:pre-wrap;box-sizing:border-box}
 .wordDocLine:focus{outline:none}
 .inlineChord{display:inline-flex;position:relative;vertical-align:baseline;transform:translateY(-1.25em);margin-right:-1em;margin-left:0;color:var(--green);font-weight:850;font-size:.9em;line-height:1;cursor:grab;user-select:none;z-index:3}
 .inlineChord.selected{background:#e8eee5;border:1px solid var(--green);border-radius:4px;padding:1px 3px;margin-right:calc(-1em - 6px)}
