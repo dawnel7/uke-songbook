@@ -1,26 +1,18 @@
 const S=(()=>{try{return JSON.parse(localStorage.getItem("ukeSongbookState"))||{}}catch(e){return {}}})();
-S.inst=S.inst||"baritone";
-S.shift=Number.isInteger(S.shift)?S.shift:0;
-S.page=!!S.page;
-S.edits=S.edits||{};
-S.edit=false;
-
+S.inst=S.inst||"baritone";S.shift=Number.isInteger(S.shift)?S.shift:0;S.page=!!S.page;S.edits=S.edits||{};S.edit=false;
 const notes=["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
-
-const shapes={
- baritone:{G:[0,0,0,3],Em:[0,3,4,2],C:[0,0,0,0],D:[2,2,2,0],B:[4,4,4,2]},
- soprano:{G:[0,2,3,2],Em:[0,4,3,2],C:[0,0,0,3],D:[2,2,2,0],B:[4,4,4,2]},
- guitar:{G:[3,2,0,0,0,3],Em:[0,2,2,0,0,0],C:[0,3,2,0,1,0],D:[0,0,0,2,3,2],B:[null,2,4,4,4,2]}
-};
-
-const sections=[
- {name:"Intro / Break",lines:[{chords:["G","Em","G","Em"],text:""}]},
- {name:"Verse 1",lines:[
-  {chords:["G","Em"],text:"Well I've heard there was a secret chord — That David played and it pleased the Lord"},
-  {chords:["C","D"],text:"But you don't really care for music, do you?"},
-  {chords:["G","C","D","Em","C"],text:"Well it goes like this: the fourth, the fifth, the minor fall and the major lift"},
-  {chords:["D","B","Em","Em"],text:"The baffled king composing Halle-lujah"}
- ]},
- {name:"Chorus",lines:[
-  {chords:["C","C","Em","Em"],text:"Halle-lujah Halle-lujah"},
-  {chords:["C","C","G","D","G","Em","G","Em"],text:"Halle
+const shapes={baritone:{G:[0,0,0,3],Em:[0,3,4,2],C:[0,0,0,0],D:[2,2,2,0],B:[4,4,4,2]},soprano:{G:[0,2,3,2],Em:[0,4,3,2],C:[0,0,0,3],D:[2,2,2,0],B:[4,4,4,2]},guitar:{G:[3,2,0,0,0,3],Em:[0,2,2,0,0,0],C:[0,3,2,0,1,0],D:[0,0,0,2,3,2],B:[null,2,4,4,4,2]}};
+const sections=[{name:"Intro / Break",lines:[{chords:["G","Em","G","Em"],text:""}]},{name:"Verse 1",lines:[{chords:["G","Em"],text:"Well I've heard there was a secret chord — That David played and it pleased the Lord"},{chords:["C","D"],text:"But you don't really care for music, do you?"},{chords:["G","C","D","Em","C"],text:"Well it goes like this: the fourth, the fifth, the minor fall and the major lift"},{chords:["D","B","Em","Em"],text:"The baffled king composing Halle-lujah"}]},{name:"Chorus",lines:[{chords:["C","C","Em","Em"],text:"Halle-lujah Halle-lujah"},{chords:["C","C","G","D","G","Em","G","Em"],text:"Halle-lu-u-jah"}]}];
+function persist(){localStorage.setItem("ukeSongbookState",JSON.stringify({inst:S.inst,shift:S.shift,page:S.page,edits:S.edits}))}
+function commitEdits(){document.querySelectorAll(".words-line[data-line]").forEach(el=>{S.edits[el.dataset.line]=el.innerText});persist()}
+function transpose(c,n){let m=c.match(/^(C#|D#|F#|G#|A#|[A-G])(m)?(7)?$/);if(!m)return c;let i=notes.indexOf(m[1]);if(i<0)return c;return notes[(i+n+120)%12]+(m[2]||"")+(m[3]||"")}
+function uniqueChords(){let all=[];sections.forEach(s=>s.lines.forEach(l=>l.chords.forEach(c=>{if(!all.includes(c))all.push(c)})));return all}
+function diagram(name){const f=shapes[S.inst][name];if(!f)return "";return `<div class="fingering">${f.map(v=>v==null?"×":v).join(" ")}</div>`}
+function renderChordStrip(){document.querySelector("#chords").innerHTML=uniqueChords().map(n=>{const x=transpose(n,S.shift);return `<div class="chordbox"><div class="chordname">${x}</div>${diagram(n)}</div>`}).join("")}
+function renderLine(line,si,li){const chordSpans=line.chords.map(c=>`<span class="inline-chord">${transpose(c,S.shift)}</span>`).join("");const key=si+"-"+li;const text=Object.prototype.hasOwnProperty.call(S.edits,key)?S.edits[key]:(line.text||"");return `<div class="song-line"><div class="chord-line">${chordSpans}</div><div class="words-line" data-line="${key}" contenteditable="${S.edit}">${text}</div></div>`}
+function render(){document.querySelector("#key").value=notes[(notes.indexOf("G")+S.shift+12)%12];renderChordStrip();document.querySelector("#lyrics").innerHTML=sections.map((sec,si)=>`<section class="section"><h3>${sec.name}</h3>${sec.lines.map((l,li)=>renderLine(l,si,li)).join("")}</section>`).join("");document.querySelector("#lyrics").className="card lyrics"+(S.page?" pageview":"");document.querySelector("#edit").textContent=S.edit?"Done":"Edit";document.querySelector("#lyrics").style.outline=S.edit?"2px dashed #526b4d":"none"}
+function openSong(){document.querySelector("#library").classList.add("hidden");document.querySelector("#songPage").classList.remove("hidden");document.querySelector("#back").classList.remove("hidden");render()}
+function openLib(){commitEdits();S.edit=false;document.querySelector("#songPage").classList.add("hidden");document.querySelector("#library").classList.remove("hidden");document.querySelector("#back").classList.add("hidden")}
+document.querySelector("#song").onclick=e=>{e.preventDefault();e.stopPropagation();openSong()};document.querySelector("#lib").onclick=openLib;document.querySelector("#back").onclick=openLib;
+document.querySelector("#instrument").onchange=e=>{commitEdits();S.inst=e.target.value;persist();render()};document.querySelector("#up").onclick=()=>{commitEdits();S.shift++;persist();render()};document.querySelector("#down").onclick=()=>{commitEdits();S.shift--;persist();render()};document.querySelector("#view").onclick=()=>{commitEdits();S.page=!S.page;persist();document.querySelector("#view").textContent=S.page?"Scroll view":"Page view";render()};document.querySelector("#edit").onclick=()=>{if(S.edit){commitEdits();S.edit=false}else{S.edit=true}render()};
+notes.forEach(n=>{let o=document.createElement("option");o.value=n;o.textContent=n;document.querySelector("#key").appendChild(o)});document.querySelector("#key").onchange=e=>{commitEdits();S.shift=notes.indexOf(e.target.value)-notes.indexOf("G");persist();render()};document.querySelector("#search").oninput=e=>{document.querySelector("#song").style.display="hallelujah".includes(e.target.value.toLowerCase())?"block":"none"};render();
