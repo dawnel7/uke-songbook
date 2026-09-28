@@ -165,153 +165,122 @@ function renderLyrics(s){
  if(state.session.edit){renderFreeEditor(el,s);}else{var out="";s.sections.forEach(function(sec){out+='<section class="section"><h3>'+esc(sec.name)+"</h3>";sec.lines.forEach(function(l){out+=displayLine(l);});out+="</section>";});el.innerHTML=out;}
 }
 function renderFreeEditor(el,s){
- var h='<div class="editDocument">';
+ var h='<div class="wordEditToolbar"><button class="btn addSectionWord">＋ Section</button><span class="wordEditHint">Click in the lyrics to type. Click a chord to select it. Double-click a chord to change it. Drag chords to move them.</span></div>';
+ h+='<div class="editDocument wordDocument">';
  s.sections.forEach(function(sec,si){
-  h+='<section class="section editSection" data-si="'+si+'"><div class="editSectionHead"><h3 class="editableSectionName" contenteditable="true" data-si="'+si+'">'+esc(sec.name)+'</h3><button class="editSectionMenu" type="button" aria-label="Section options" data-si="'+si+'">⋯</button></div>';
+  h+='<section class="section editSection" data-si="'+si+'"><h3 class="editableSectionName" contenteditable="true" data-si="'+si+'">'+esc(sec.name)+'</h3>';
   sec.lines.forEach(function(l,li){
-   h+='<div class="editSongLine" data-si="'+si+'" data-li="'+li+'"><div class="editVisual"><div class="editChordLayer">';
+   h+='<div class="editSongLine wordLine" data-si="'+si+'" data-li="'+li+'"><div class="wordLineInner">';
+   h+='<div class="wordChordLayer">';
    l.chords.forEach(function(ch,ci){
-    h+='<span class="editChord" draggable="true" data-si="'+si+'" data-li="'+li+'" data-ci="'+ci+'">'+esc(transpose(ch.name,state.settings.shift))+'</span>';
+    h+='<span class="wordChord" draggable="true" contenteditable="false" data-si="'+si+'" data-li="'+li+'" data-ci="'+ci+'">'+esc(transpose(ch.name,state.settings.shift))+'</span>';
    });
-   h+='</div><div class="editWords" contenteditable="true" spellcheck="true">'+esc(l.text)+'</div></div></div>';
+   h+='</div><div class="wordLyrics" contenteditable="true" spellcheck="true">'+esc(l.text)+'</div></div></div>';
   });
   h+='</section>';
  });
  h+='</div>';
  el.innerHTML=h;
- bindFreeEditor();
- positionEditorChords();
+ bindWordEditor();
+ positionWordChords();
 }
 
-function bindFreeEditor(){
- var song=currentSong();
-
- document.querySelectorAll(".editWords").forEach(function(t){
+function bindWordEditor(){
+ document.querySelectorAll(".wordLyrics").forEach(function(t){
   t.addEventListener("input",function(){
-   var row=t.closest(".editSongLine"),l=currentSong().sections[Number(row.dataset.si)].lines[Number(row.dataset.li)];
-   l.text=plainEditableText(t);
-   positionEditorChords();
+   var row=t.closest(".wordLine"),l=currentSong().sections[Number(row.dataset.si)].lines[Number(row.dataset.li)];
+   l.text=plainEditableText(t); positionWordChords();
   });
   t.addEventListener("keydown",function(e){
    if(e.key==="Enter"){e.preventDefault();document.execCommand("insertText",false," ");}
   });
   t.addEventListener("dblclick",function(e){
-   var name=prompt("Add chord (for example G, Em, C, D7)", "");
+   if(e.target.closest(".wordChord"))return;
+   var name=prompt("Add chord","C");
    if(!name||!name.trim())return;
-   var row=t.closest(".editSongLine"),si=Number(row.dataset.si),li=Number(row.dataset.li);
-   var pos=caretOffsetAtPoint(t,e.clientX,e.clientY);
-   currentSong().sections[si].lines[li].chords.push({name:name.trim(),pos:pos});
+   var row=t.closest(".wordLine"),si=Number(row.dataset.si),li=Number(row.dataset.li);
+   currentSong().sections[si].lines[li].chords.push({name:name.trim(),pos:caretOffsetAtPoint(t,e.clientX,e.clientY)});
    renderSong();
   });
-  t.addEventListener("dragover",function(e){e.preventDefault();t.classList.add("dropReady");});
+  t.addEventListener("dragover",function(e){e.preventDefault();e.dataTransfer.dropEffect="move";t.classList.add("dropReady");});
   t.addEventListener("dragleave",function(){t.classList.remove("dropReady");});
   t.addEventListener("drop",function(e){
    e.preventDefault();t.classList.remove("dropReady");
    var raw=e.dataTransfer.getData("text/songbook-chord");if(!raw)return;
-   var d;try{d=JSON.parse(raw);}catch(err){return;}
-   var s=currentSong(),source=s.sections[d.si]&&s.sections[d.si].lines[d.li];if(!source)return;
-   var ch=source.chords[d.ci];if(!ch)return;
-   var targetRow=t.closest(".editSongLine"),tsi=Number(targetRow.dataset.si),tli=Number(targetRow.dataset.li),target=s.sections[tsi].lines[tli];
+   var d;try{d=JSON.parse(raw);}catch(_){return;}
+   var s=currentSong(),src=s.sections[d.si]&&s.sections[d.si].lines[d.li];if(!src)return;
+   var ch=src.chords[d.ci];if(!ch)return;
+   var row=t.closest(".wordLine"),tsi=Number(row.dataset.si),tli=Number(row.dataset.li),target=s.sections[tsi].lines[tli];
    var pos=caretOffsetAtPoint(t,e.clientX,e.clientY);
-   if(d.si!==tsi||d.li!==tli){source.chords.splice(d.ci,1);target.chords.push({name:ch.name,pos:pos});}
-   else{ch.pos=pos;}
+   if(d.si!==tsi||d.li!==tli){src.chords.splice(d.ci,1);target.chords.push({name:ch.name,pos:pos});}else ch.pos=pos;
    renderSong();
   });
  });
-
- document.querySelectorAll(".editChord").forEach(function(chip){
+ document.querySelectorAll(".wordChord").forEach(function(chip){
+  chip.addEventListener("click",function(e){e.stopPropagation();document.querySelectorAll(".wordChord.selected").forEach(x=>x.classList.remove("selected"));chip.classList.add("selected");});
+  chip.addEventListener("dblclick",function(e){
+   e.stopPropagation();
+   var s=currentSong(),ch=s.sections[Number(chip.dataset.si)].lines[Number(chip.dataset.li)].chords[Number(chip.dataset.ci)];
+   var name=prompt("Change chord",ch.name);if(name===null)return;if(name.trim()){ch.name=name.trim();renderSong();}
+  });
   chip.addEventListener("dragstart",function(e){
    e.dataTransfer.setData("text/songbook-chord",JSON.stringify({si:Number(chip.dataset.si),li:Number(chip.dataset.li),ci:Number(chip.dataset.ci)}));
    e.dataTransfer.effectAllowed="move";
+   chip.classList.add("dragging");
   });
-  chip.ondblclick=function(e){
-   e.stopPropagation();
-   var s=currentSong(),ch=s.sections[Number(chip.dataset.si)].lines[Number(chip.dataset.li)].chords[Number(chip.dataset.ci)];
-   var name=prompt("Change chord",ch.name);
-   if(name===null)return;
-   name=name.trim();
-   if(name){ch.name=name;renderSong();}
-  };
-  chip.oncontextmenu=function(e){
-   e.preventDefault();
-   if(confirm("Delete this chord?")){
-    var s=currentSong(),si=Number(chip.dataset.si),li=Number(chip.dataset.li),ci=Number(chip.dataset.ci);
-    s.sections[si].lines[li].chords.splice(ci,1);
-    renderSong();
-   }
-  };
+  chip.addEventListener("dragend",function(){chip.classList.remove("dragging");});
  });
-
- document.querySelectorAll(".editSectionMenu").forEach(function(b){
-  b.onclick=function(e){
-   e.stopPropagation();
-   var si=Number(b.dataset.si),s=currentSong(),choice=prompt("Section options: type ADD to add a new section after this one, or DELETE to remove this section.","");
-   if(!choice)return;
-   choice=choice.trim().toUpperCase();
-   if(choice==="DELETE"){
-    if(s.sections.length===1){alert("A song needs at least one section.");return;}
-    if(confirm("Delete this section and all of its lyrics?")){s.sections.splice(si,1);renderSong();}
-   }else if(choice==="ADD"){
-    s.sections.splice(si+1,0,{name:"New section",lines:[line("",[])]});renderSong();
-   }
-  };
+ document.addEventListener("keydown",function(e){
+  var selected=document.querySelector(".wordChord.selected");
+  if(!selected)return;
+  if((e.key==="Delete"||e.key==="Backspace")&&!document.activeElement.isContentEditable){
+   var s=currentSong(),si=Number(selected.dataset.si),li=Number(selected.dataset.li),ci=Number(selected.dataset.ci);
+   s.sections[si].lines[li].chords.splice(ci,1);renderSong();
+  }
  });
- 
  document.querySelectorAll(".editableSectionName").forEach(function(h){
-  h.addEventListener("input",function(){
-   currentSong().sections[Number(h.dataset.si)].name=plainEditableText(h);
-  });
+  h.addEventListener("input",function(){currentSong().sections[Number(h.dataset.si)].name=plainEditableText(h);});
  });
+ var add=document.querySelector(".addSectionWord");
+ if(add)add.onclick=function(){
+  var s=currentSong(),name=prompt("Section name","VERSE");
+  if(!name||!name.trim())return;
+  s.sections.push({name:name.trim(),lines:[line("",[])]});renderSong();
+ };
 }
 
 function plainEditableText(el){
  var walker=document.createTreeWalker(el,NodeFilter.SHOW_TEXT,null,false),parts=[],n;
  while(n=walker.nextNode())parts.push(n.nodeValue);
- return parts.join("").replace(/\\u00a0/g," ").replace(/\\r/g,"").replace(/\\n+/g," ").replace(/\\s+/g," ").trim();
+ return parts.join("").replace(/\u00a0/g," ").replace(/\r/g,"").replace(/\n+/g," ").replace(/\s+/g," ").trim();
 }
-
 function caretOffsetAtPoint(el,x,y){
  var range=null;
  if(document.caretRangeFromPoint)range=document.caretRangeFromPoint(x,y);
- else if(document.caretPositionFromPoint){
-  var p=document.caretPositionFromPoint(x,y);
-  if(p){range=document.createRange();range.setStart(p.offsetNode,p.offset);range.collapse(true);}
- }
+ else if(document.caretPositionFromPoint){var p=document.caretPositionFromPoint(x,y);if(p){range=document.createRange();range.setStart(p.offsetNode,p.offset);range.collapse(true);}}
  if(!range||!el.contains(range.startContainer))return Math.max(0,(el.innerText||"").length);
  return textOffsetBefore(el,range.startContainer,range.startOffset);
 }
-
 function textOffsetBefore(root,node,offset){
  var walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,null,false),total=0,n;
- while(n=walker.nextNode()){
-  if(n===node)return total+offset;
-  total+=n.nodeValue.length;
- }
+ while(n=walker.nextNode()){if(n===node)return total+offset;total+=n.nodeValue.length;}
  return total;
 }
-
-function positionEditorChords(){
- document.querySelectorAll(".editSongLine").forEach(function(row){
-  var text=row.querySelector(".editWords"),layer=row.querySelector(".editChordLayer");
-  if(!text||!layer)return;
+function positionWordChords(){
+ document.querySelectorAll(".wordLine").forEach(function(row){
+  var text=row.querySelector(".wordLyrics"),layer=row.querySelector(".wordChordLayer");if(!text||!layer)return;
   var si=Number(row.dataset.si),li=Number(row.dataset.li),chs=currentSong().sections[si].lines[li].chords;
   var tr=text.getBoundingClientRect();
-  layer.style.height=Math.max(32,text.offsetHeight)+"px";
-  layer.querySelectorAll(".editChord").forEach(function(node,ci){
+  layer.style.height=Math.max(30,text.offsetHeight)+"px";
+  layer.querySelectorAll(".wordChord").forEach(function(node,ci){
    var ch=chs[ci],pos=Math.max(0,Math.min((text.innerText||"").length,Number(ch.pos)||0));
    var range=document.createRange(),walker=document.createTreeWalker(text,NodeFilter.SHOW_TEXT,null,false),n,remaining=pos;
-   while(n=walker.nextNode()){
-    if(remaining<=n.nodeValue.length){range.setStart(n,remaining);range.collapse(true);break;}
-    remaining-=n.nodeValue.length;
-   }
-   if(!n){node.style.left="0px";node.style.top="0px";return;}
-   var cr=range.getBoundingClientRect();
-   node.style.left=Math.max(0,cr.left-tr.left)+"px";
-   node.style.top="-1.45em";
+   while(n=walker.nextNode()){if(remaining<=n.nodeValue.length){range.setStart(n,remaining);range.collapse(true);break;}remaining-=n.nodeValue.length;}
+   if(!n){node.style.left="0px";return;}
+   var cr=range.getBoundingClientRect();node.style.left=Math.max(0,cr.left-tr.left)+"px";
   });
  });
 }
-
 function beginEdit(){
  var id=state.session.songId;state.session.edit=true;state.session.draft=clone(state.songs[id]);state.session.draftNew=false;render();
 }
