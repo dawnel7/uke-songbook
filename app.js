@@ -170,13 +170,16 @@ function renderFreeEditor(el,s){
  s.sections.forEach(function(sec,si){
   h+='<section class="section editSection wordSection" data-si="'+si+'"><h3 class="editableSectionName" contenteditable="true" data-si="'+si+'">'+esc(sec.name)+'</h3>';
   h+='<div class="wordSectionEditor" data-si="'+si+'"><div class="wordSectionChords">';
-  sec.lines.forEach(function(l){
-   (l.chords||[]).forEach(function(ch){
-    h+='<span class="sectionChord" draggable="true" data-si="'+si+'" data-li="'+sec.lines.indexOf(l)+'" data-pos="'+Number(ch.pos||0)+'">'+esc(transpose(ch.name,state.settings.shift))+'</span>';
+  sec.lines.forEach(function(l,li){
+   (l.chords||[]).forEach(function(ch,ci){
+    h+='<span class="sectionChord" draggable="false" data-si="'+si+'" data-li="'+li+'" data-ci="'+ci+'">'+esc(transpose(ch.name,state.settings.shift))+'</span>';
    });
   });
   h+='</div><div class="wordSectionText" contenteditable="true" spellcheck="true">';
-  sec.lines.forEach(function(l,i){h+=esc(l.text||'')+(i<sec.lines.length-1?'\\n':'');});
+  sec.lines.forEach(function(l,i){
+   var t=String(l.text||"").replace(/\\\\n/g,"\\n");
+   h+=esc(t)+(i<sec.lines.length-1?'\\n':'');
+  });
   h+='</div></div></section>';
  });
  h+='</div>';
@@ -193,47 +196,82 @@ function bindSectionEditors(){
   ed.addEventListener("drop",function(e){
    e.preventDefault();ed.classList.remove("dropReady");
    var id=e.dataTransfer.getData("text/songbook-chord");if(!id)return;
-   var chip=document.querySelector('.sectionChord[data-drag-id="'+id+'"]');if(!chip)return;
+   var meta=window.__songbookDragChords&&window.__songbookDragChords[id];if(!meta)return;
    var r=caretRangeIn(ed,e.clientX,e.clientY);if(!r)return;
-   var targetOffset=textOffsetBefore(ed,r.startContainer,r.startOffset);
-   var sourceSi=Number(chip.dataset.si),sourceLi=Number(chip.dataset.li);
-   var s=currentSong(),src=s.sections[sourceSi].lines[sourceLi],ci=findChordIndex(src,chip.dataset.name,Number(chip.dataset.pos));
-   if(ci<0)return;
-   var ch=src.chords[ci];
-   if(sourceSi!==Number(ed.dataset.si)){src.chords.splice(ci,1);s.sections[Number(ed.dataset.si)].lines[0].chords.push({name:ch.name,pos:targetOffset});}
-   else ch.pos=targetOffset;
-   renderSong();
+   moveChordToRange(meta,ed,r);
   });
  });
  document.querySelectorAll(".sectionChord").forEach(function(chip,i){
-  chip.dataset.dragId="chord-"+Date.now()+"-"+i;
-  chip.dataset.name=chip.textContent.trim();
+  var id="chord-"+Date.now()+"-"+i;
+  chip.dataset.dragId=id;
   chip.addEventListener("click",function(e){e.stopPropagation();clearChordSelection();chip.classList.add("selected");});
   chip.addEventListener("dblclick",function(e){
    e.stopPropagation();
-   var si=Number(chip.dataset.si),li=Number(chip.dataset.li),pos=Number(chip.dataset.pos),s=currentSong(),ch=findChordByPos(s.sections[si].lines[li],pos);
+   var si=Number(chip.dataset.si),li=Number(chip.dataset.li),ci=Number(chip.dataset.ci),s=currentSong(),ch=s.sections[si].lines[li].chords[ci];
    if(!ch)return;
-   var name=prompt("Change chord",ch.name);if(name===null||!name.trim())return;
+   var name=prompt("Change chord",ch.name);
+   if(name===null||!name.trim())return;
    ch.name=name.trim();renderSong();
   });
-  chip.addEventListener("dragstart",function(e){
-   e.dataTransfer.setData("text/songbook-chord",chip.dataset.dragId);e.dataTransfer.effectAllowed="move";chip.classList.add("dragging");
+  chip.addEventListener("pointerdown",function(e){
+   if(e.button!==0)return;
+   e.preventDefault();e.stopPropagation();
+   var meta={si:Number(chip.dataset.si),li:Number(chip.dataset.li),ci:Number(chip.dataset.ci),x:e.clientX,y:e.clientY,chip:chip};
+   window.__songbookPointerDrag=meta;
+   chip.classList.add("dragging");
+   document.body.classList.add("chordDragging");
+   window.addEventListener("pointermove",onChordPointerMove);
+   window.addEventListener("pointerup",onChordPointerUp,{once:true});
   });
-  chip.addEventListener("dragend",function(){chip.classList.remove("dragging");});
  });
  document.querySelectorAll(".editableSectionName").forEach(function(h){
   h.addEventListener("input",function(){currentSong().sections[Number(h.dataset.si)].name=plainEditableText(h);});
  });
 }
-
-function findChordIndex(lineObj,name,pos){
- var best=-1,bd=Infinity;(lineObj.chords||[]).forEach(function(c,i){var d=Math.abs(Number(c.pos||0)-pos);if(d<bd&&transpose(c.name,state.settings.shift)===name){bd=d;best=i;}});return best;
+function onChordPointerMove(e){
+ var d=window.__songbookPointerDrag;if(!d)return;
+ var dx=e.clientX-d.x,dy=e.clientY-d.y;
+ d.chip.style.transform="translate("+dx+"px,"+dy+"px)";
 }
-function findChordByPos(lineObj,pos){
- var best=null,bd=Infinity;(lineObj.chords||[]).forEach(function(c){var d=Math.abs(Number(c.pos||0)-pos);if(d<bd){bd=d;best=c;}});return best;
+function onChordPointerUp(e){
+ var d=window.__songbookPointerDrag;if(!d)return;
+ window.removeEventListener("pointermove",onChordPointerMove);
+ d.chip.classList.remove("dragging");document.body.classList.remove("chordDragging");
+ var chips=document.querySelectorAll(".sectionChord");chips.forEach(function(c){c.style.pointerEvents="none";});
+ var ed=document.elementFromPoint(e.clientX,e.clientY);
+ var target=ed&&ed.closest?ed.closest(".wordSectionText"):null;
+ chips.forEach(function(c){c.style.pointerEvents="auto";});
+ d.chip.style.transform="";
+ window.__songbookPointerDrag=null;
+ if(!target)return;
+ var r=caretRangeIn(target,e.clientX,e.clientY);
+ if(!r)return;
+ moveChordToRange({si:d.si,li:d.li,ci:d.ci},target,r);
+}
+function moveChordToRange(meta,targetEd,range){
+ var s=currentSong(),src=s.sections[meta.si]&&s.sections[meta.si].lines[meta.li],ch=src&&src.chords[meta.ci];
+ if(!ch)return;
+ var targetSi=Number(targetEd.closest(".wordSectionEditor").dataset.si);
+ var global=textOffsetBefore(targetEd,range.startContainer,range.startOffset);
+ var lines=s.sections[targetSi].lines,remain=global,targetLi=0;
+ for(var i=0;i<lines.length;i++){
+  var len=String(lines[i].text||"").length;
+  if(remain<=len){targetLi=i;break;}
+  remain-=len+1;
+  targetLi=Math.min(i+1,lines.length-1);
+ }
+ var targetLine=lines[targetLi];
+ if(meta.si===targetSi&&meta.li===targetLi&&meta.ci===0&&src.chords.length===1){
+  ch.pos=Math.max(0,Math.min(String(targetLine.text||"").length,remain));renderSong();return;
+ }
+ src.chords.splice(meta.ci,1);
+ targetLine.chords=targetLine.chords||[];
+ targetLine.chords.push({name:ch.name,pos:Math.max(0,Math.min(String(targetLine.text||"").length,remain))});
+ renderSong();
 }
 function syncSectionEditor(ed){
- var si=Number(ed.dataset.si),sec=currentSong().sections[si],raw=ed.innerText.replace(/\\r/g,""),parts=raw.split("\\n");
+ var si=Number(ed.dataset.si),sec=currentSong().sections[si],raw=ed.innerText.replace(/\\r/g,"").replace(/\\\\n/g,"\\n");
+ var parts=raw.split("\\n");
  while(sec.lines.length<parts.length)sec.lines.push(line("",[]));
  while(sec.lines.length>parts.length)sec.lines.pop();
  parts.forEach(function(t,i){sec.lines[i].text=t;});
@@ -241,8 +279,11 @@ function syncSectionEditor(ed){
 }
 function caretRangeIn(root,x,y){
  var r=null;
- if(document.caretRangeFromPoint)r=document.caretRangeFromPoint(x,y);
- else if(document.caretPositionFromPoint){var p=document.caretPositionFromPoint(x,y);if(p){r=document.createRange();r.setStart(p.offsetNode,p.offset);r.collapse(true);}}
+ if(document.caretPositionFromPoint){
+  var p=document.caretPositionFromPoint(x,y);
+  if(p){r=document.createRange();r.setStart(p.offsetNode,p.offset);r.collapse(true);}
+ }
+ if(!r&&document.caretRangeFromPoint)r=document.caretRangeFromPoint(x,y);
  if(!r||!root.contains(r.startContainer))return null;return r;
 }
 function textOffsetBefore(root,node,offset){
@@ -255,20 +296,30 @@ function positionSectionChords(){
  document.querySelectorAll(".wordSectionEditor").forEach(function(box){
   var ed=box.querySelector(".wordSectionText"),layer=box.querySelector(".wordSectionChords");if(!ed||!layer)return;
   var si=Number(box.dataset.si),sec=currentSong().sections[si],nodes=Array.from(layer.querySelectorAll(".sectionChord"));
+  nodes.forEach(function(node){node.style.left="0px";node.style.top="0px";});
   var offsetBase=0;
   sec.lines.forEach(function(lineObj,li){
-   var lineStart=offsetBase, lineText=lineObj.text||"";
-   lineObj.chords.forEach(function(ch){
-    var node=nodes.find(function(n){return Number(n.dataset.li)===li&&Number(n.dataset.pos)===Number(ch.pos)&&!n.dataset.used;});
-    if(!node)return;node.dataset.used="1";
-    var global=lineStart+Math.max(0,Math.min(lineText.length,Number(ch.pos)||0));
-    var range=rangeAtTextOffset(ed,global);if(!range)return;
-    var er=ed.getBoundingClientRect(),rr=range.getBoundingClientRect();
-    node.style.left=(rr.left-er.left)+"px";node.style.top=(rr.top-er.top-26)+"px";
-   });
-   offsetBase+=lineText.length+1;
+   var text=String(lineObj.text||"").replace(/\\\\n/g,"\\n");
+   if(!text.length){
+    var x=0;
+    (lineObj.chords||[]).forEach(function(ch,ci){
+     var node=nodes.find(function(n){return Number(n.dataset.li)===li&&Number(n.dataset.ci)===ci;});
+     if(!node)return;
+     node.style.left=x+"px";node.style.top=(offsetBase*0)+"px";x+=node.offsetWidth+18;
+    });
+   }else{
+    (lineObj.chords||[]).forEach(function(ch,ci){
+     var node=nodes.find(function(n){return Number(n.dataset.li)===li&&Number(n.dataset.ci)===ci;});
+     if(!node)return;
+     var global=offsetBase+Math.max(0,Math.min(text.length,Number(ch.pos)||0));
+     var range=rangeAtTextOffset(ed,global);if(!range)return;
+     var er=ed.getBoundingClientRect(),rr=range.getBoundingClientRect();
+     node.style.left=Math.max(0,rr.left-er.left)+"px";
+     node.style.top=Math.max(0,rr.top-er.top-25)+"px";
+    });
+   }
+   offsetBase+=text.length+1;
   });
-  nodes.forEach(function(n){delete n.dataset.used;});
  });
 }
 function rangeAtTextOffset(root,target){
