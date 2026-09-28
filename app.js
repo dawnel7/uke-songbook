@@ -191,15 +191,26 @@ function renderFreeEditor(el,s){
 function normalizeSongText(v){return String(v||"").replace(/\\\\n/g,"\\n").replace(/\\r/g,"");}
 function bindSectionEditors(){
  document.querySelectorAll(".wordSectionText").forEach(function(ed){
-  ed.addEventListener("input",function(){syncSectionEditor(ed);positionSectionChords();});
+  ed.__songbookSnapshot=getSectionSnapshot(Number(ed.dataset.si));
+  ed.addEventListener("beforeinput",function(e){
+   if(e.inputType==="insertParagraph"||e.inputType==="insertLineBreak"){
+    e.preventDefault();splitAtSelection(ed);return;
+   }
+   if(e.inputType==="deleteContentBackward"||e.inputType==="deleteContentForward"){
+    if(!selectionIsCollapsedIn(ed)){e.preventDefault();deleteSelection(ed);return;}
+   }
+  });
+  ed.addEventListener("input",function(){syncSectionEditor(ed);positionSectionChords();ed.__songbookSnapshot=getSectionSnapshot(Number(ed.dataset.si));});
+  ed.addEventListener("copy",function(e){copySelection(ed,e,false);});
+  ed.addEventListener("cut",function(e){copySelection(ed,e,true);});
+  ed.addEventListener("paste",function(e){pasteSelection(ed,e);});
   ed.addEventListener("dragover",function(e){e.preventDefault();ed.classList.add("dropReady");});
   ed.addEventListener("dragleave",function(e){if(!ed.contains(e.relatedTarget))ed.classList.remove("dropReady");});
   ed.addEventListener("drop",function(e){
    e.preventDefault();ed.classList.remove("dropReady");
    var id=e.dataTransfer.getData("text/songbook-chord");if(!id)return;
    var meta=window.__songbookDragChords&&window.__songbookDragChords[id];if(!meta)return;
-   var r=caretRangeIn(ed,e.clientX,e.clientY);if(!r)return;
-   moveChordToRange(meta,ed,r);
+   var r=caretRangeIn(ed,e.clientX,e.clientY);if(!r)return;moveChordToRange(meta,ed,r);
   });
  });
  document.querySelectorAll(".sectionChord").forEach(function(chip,i){
@@ -208,9 +219,7 @@ function bindSectionEditors(){
   chip.addEventListener("dblclick",function(e){
    e.stopPropagation();
    var si=Number(chip.dataset.si),li=Number(chip.dataset.li),ci=Number(chip.dataset.ci),s=currentSong(),ch=s.sections[si].lines[li].chords[ci];
-   if(!ch)return;
-   var name=prompt("Change chord",ch.name);if(name===null||!name.trim())return;
-   ch.name=name.trim();renderSong();
+   if(!ch)return;var name=prompt("Change chord",ch.name);if(name===null||!name.trim())return;ch.name=name.trim();renderSong();
   });
   chip.addEventListener("pointerdown",function(e){
    if(e.button!==0)return;e.preventDefault();e.stopPropagation();
@@ -223,52 +232,103 @@ function bindSectionEditors(){
   h.addEventListener("input",function(){currentSong().sections[Number(h.dataset.si)].name=plainEditableText(h);});
  });
 }
-function onChordPointerMove(e){var d=window.__songbookPointerDrag;if(!d)return;d.chip.style.transform="translate("+(e.clientX-d.x)+"px,"+(e.clientY-d.y)+"px)";}
-function onChordPointerUp(e){
- var d=window.__songbookPointerDrag;if(!d)return;
- window.removeEventListener("pointermove",onChordPointerMove);d.chip.classList.remove("dragging");document.body.classList.remove("chordDragging");
- var chips=document.querySelectorAll(".sectionChord");chips.forEach(function(c){c.style.pointerEvents="none";});
- var target=document.elementFromPoint(e.clientX,e.clientY);chips.forEach(function(c){c.style.pointerEvents="auto";});
- d.chip.style.transform="";window.__songbookPointerDrag=null;
- var ed=target&&target.closest?target.closest(".wordSectionText"):null;if(!ed)return;
- var r=caretRangeIn(ed,e.clientX,e.clientY);if(!r)return;moveChordToRange(d,ed,r);
+function getSectionSnapshot(si){
+ var sec=currentSong().sections[si];return sec.lines.map(function(l){return {text:normalizeSongText(l.text||""),chords:(l.chords||[]).map(function(c){return {name:c.name,pos:Number(c.pos)||0};})};});
 }
-function moveChordToRange(meta,targetEd,range){
- var s=currentSong(),src=s.sections[meta.si]&&s.sections[meta.si].lines[meta.li],ch=src&&src.chords[meta.ci];if(!ch)return;
- var targetSi=Number(targetEd.closest(".wordSectionEditor").dataset.si);
- var targetDiv=range.startContainer.nodeType===1?range.startContainer.closest(".wordDocLine"):range.startContainer.parentElement.closest(".wordDocLine");
- if(!targetDiv)return;
- var targetLi=Number(targetDiv.dataset.li);
- var offset=textOffsetBefore(targetDiv,range.startContainer,range.startOffset);
- var targetLine=s.sections[targetSi].lines[targetLi];
- src.chords.splice(meta.ci,1);
- targetLine.chords=targetLine.chords||[];
- targetLine.chords.push({name:ch.name,pos:Math.max(0,Math.min(normalizeSongText(targetLine.text).length,offset))});
+function getSelectionOffsets(ed){
+ var sel=window.getSelection();if(!sel||!sel.rangeCount)return null;
+ var r=sel.getRangeAt(0);if(!ed.contains(r.commonAncestorContainer))return null;
+ var a=textOffsetBefore(ed,r.startContainer,r.startOffset),b=textOffsetBefore(ed,r.endContainer,r.endOffset);
+ return {start:Math.min(a,b),end:Math.max(a,b),backward:a>b};
+}
+function selectionIsCollapsedIn(ed){var x=getSelectionOffsets(ed);return !x||x.start===x.end;}
+function splitAtSelection(ed){
+ var x=getSelectionOffsets(ed);if(!x)return;
+ var si=Number(ed.dataset.si),sec=currentSong().sections[si],lineEl=closestDocLine(window.getSelection().focusNode),li=lineEl?Number(lineEl.dataset.li):0;
+ var lineText=normalizeSongText(sec.lines[li].text||""),lineStart=sectionLineStart(sec,li);
+ var local=Math.max(0,Math.min(lineText.length,x.start-lineStart));
+ var old=sec.lines[li],left=lineText.slice(0,local),right=lineText.slice(local);
+ var leftCh=[],rightCh=[];
+ (old.chords||[]).forEach(function(ch){var p=Number(ch.pos)||0;if(p<=local)leftCh.push({name:ch.name,pos:p});else rightCh.push({name:ch.name,pos:p-local});});
+ old.text=left;old.chords=leftCh;
+ sec.lines.splice(li+1,0,{text:right,chords:rightCh});
+ rerenderEditorKeepCaret(si,li+1,0);
+}
+function closestDocLine(n){while(n&&n.nodeType){if(n.nodeType===1&&n.classList&&n.classList.contains("wordDocLine"))return n;n=n.parentNode;}return null;}
+function sectionLineStart(sec,li){var n=0;for(var i=0;i<li;i++)n+=normalizeSongText(sec.lines[i].text||"").length+1;return n;}
+function rerenderEditorKeepCaret(si,li,offset){
+ renderSong();
+ var ed=document.querySelector('.wordSectionText[data-si="'+si+'"]');if(!ed)return;
+ var line=ed.querySelector('.wordDocLine[data-li="'+li+'"]');if(!line)return;
+ var node=line.firstChild||line,off=Math.min(offset,node.nodeValue?node.nodeValue.length:0),r=document.createRange();r.setStart(node,off);r.collapse(true);
+ var sel=window.getSelection();sel.removeAllRanges();sel.addRange(r);ed.focus();
+}
+function deleteSelection(ed){
+ var x=getSelectionOffsets(ed);if(!x||x.start===x.end)return;
+ var si=Number(ed.dataset.si),sec=currentSong().sections[si],start=x.start,end=x.end;
+ var pos=0,newLines=[];
+ sec.lines.forEach(function(old,li){
+  var text=normalizeSongText(old.text||""),ls=pos,le=pos+text.length;
+  var cutStart=Math.max(0,start-ls),cutEnd=Math.min(text.length,end-ls);
+  if(end<=ls||start>=le){newLines.push({text:text,chords:(old.chords||[]).map(function(c){return {name:c.name,pos:Number(c.pos)||0};})});}
+  else{
+   var nt=text.slice(0,cutStart)+text.slice(cutEnd);
+   var delta=cutEnd-cutStart,chords=[];
+   (old.chords||[]).forEach(function(c){
+    var p=Number(c.pos)||0;
+    if(p>=cutStart&&p<=cutEnd)return;
+    chords.push({name:c.name,pos:p>cutEnd?p-delta:p});
+   });
+   newLines.push({text:nt,chords:chords});
+  }
+  pos=le+1;
+ });
+ while(newLines.length>1&&newLines[newLines.length-1].text===""&&newLines[newLines.length-1].chords.length===0)newLines.pop();
+ sec.lines=newLines.length?newLines:[line("",[])];
+ rerenderEditorKeepCaret(si,0,Math.min(x.start,normalizeSongText(sec.lines[0].text).length));
+}
+function copySelection(ed,e,cut){
+ var x=getSelectionOffsets(ed);if(!x||x.start===x.end)return;
+ var si=Number(ed.dataset.si),sec=currentSong().sections[si],text=sectionTextRange(sec,x.start,x.end);
+ var payload=sectionPayloadRange(sec,x.start,x.end);
+ e.preventDefault();e.clipboardData.setData("text/plain",text);e.clipboardData.setData("application/x-uke-songbook",JSON.stringify(payload));
+ if(cut)deleteSelection(ed);
+}
+function sectionTextRange(sec,start,end){
+ var all=sec.lines.map(function(l){return normalizeSongText(l.text||"");}).join("\n");return all.slice(start,end);
+}
+function sectionPayloadRange(sec,start,end){
+ var all=[],pos=0;
+ sec.lines.forEach(function(l,li){
+  var text=normalizeSongText(l.text||""),ls=pos,le=pos+text.length;
+  if(end>ls&&start<le)all.push({text:text.slice(Math.max(0,start-ls),Math.min(text.length,end-ls)),chords:(l.chords||[]).filter(function(c){var p=Number(c.pos)||0;return p>=Math.max(0,start-ls)&&p<=Math.min(text.length,end-ls);}).map(function(c){return {name:c.name,pos:(Number(c.pos)||0)-Math.max(0,start-ls)};})});
+  pos=le+1;
+ });return {lines:all};
+}
+function pasteSelection(ed,e){
+ var custom=e.clipboardData.getData("application/x-uke-songbook"),plain=e.clipboardData.getData("text/plain");
+ if(!plain&&!custom)return;e.preventDefault();
+ var x=getSelectionOffsets(ed);if(!x)return;
+ if(x.start!==x.end)deleteSelection(ed);
+ var si=Number(ed.dataset.si),sec=currentSong().sections[si],lineEl=closestDocLine(window.getSelection().focusNode),li=lineEl?Number(lineEl.dataset.li):0;
+ var local=textOffsetBefore(lineEl,window.getSelection().focusNode,window.getSelection().focusOffset),old=normalizeSongText(sec.lines[li].text||""),before=old.slice(0,local),after=old.slice(local);
+ var data=null;try{data=custom?JSON.parse(custom):null;}catch(_){}
+ if(data&&data.lines){
+  var incoming=data.lines;var made=incoming.map(function(v){return {text:v.text,chords:(v.chords||[]).map(function(c){return {name:c.name,pos:Number(c.pos)||0};})};});
+  made[0].text=before+made[0].text;made[0].chords.forEach(function(c){c.pos+=before.length;});
+  made[made.length-1].text+=after;
+  sec.lines.splice.apply(sec.lines,[li,1].concat(made));
+ }else{
+  var parts=String(plain||"").replace(/\\r/g,"").split("\\n");
+  if(parts.length===1){sec.lines[li].text=before+parts[0]+after;(sec.lines[li].chords||[]).forEach(function(c){if(c.pos>=local)c.pos+=parts[0].length;});}
+  else{
+   var made=parts.map(function(t){return {text:t,chords:[]};});made[0].text=before+made[0].text;made[made.length-1].text+=after;
+   var oldCh=sec.lines[li].chords||[];oldCh.forEach(function(c){if(c.pos<local)made[0].chords.push({name:c.name,pos:c.pos});else made[made.length-1].chords.push({name:c.name,pos:c.pos-local+parts[parts.length-1].length});});
+   sec.lines.splice.apply(sec.lines,[li,1].concat(made));
+  }
+ }
  renderSong();
 }
-function syncSectionEditor(ed){
- var si=Number(ed.dataset.si),sec=currentSong().sections[si],divs=Array.from(ed.querySelectorAll(":scope > .wordDocLine")),lines=[];
- divs.forEach(function(div){
-  var t=Array.from(div.childNodes).map(function(n){return n.nodeType===3?n.nodeValue:(n.textContent||"");}).join("");
-  lines.push({text:t.replace(/\\u00a0/g," "),chords:[]});
- });
- if(!lines.length)lines=[line("",[])];
- var old=sec.lines;
- lines.forEach(function(n,i){n.chords=(old[i]&&old[i].chords)||[];});
- sec.lines=lines;
-}
-function caretRangeIn(root,x,y){
- var r=null;
- if(document.caretPositionFromPoint){var p=document.caretPositionFromPoint(x,y);if(p){r=document.createRange();r.setStart(p.offsetNode,p.offset);r.collapse(true);}}
- if(!r&&document.caretRangeFromPoint)r=document.caretRangeFromPoint(x,y);
- if(!r||!root.contains(r.startContainer))return null;return r;
-}
-function textOffsetBefore(root,node,offset){
- var w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,null,false),total=0,n;
- while(n=w.nextNode()){if(n===node)return total+offset;total+=n.nodeValue.length;}return total;
-}
-function clearChordSelection(){document.querySelectorAll(".sectionChord.selected").forEach(function(x){x.classList.remove("selected");});}
-function plainEditableText(el){var w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT,null,false),p=[],n;while(n=w.nextNode())p.push(n.nodeValue);return p.join("").replace(/\\u00a0/g," ").replace(/\\r/g,"").replace(/\\n+/g," ").replace(/\\s+/g," ").trim();}
 function positionSectionChords(){
  document.querySelectorAll(".wordSectionEditor").forEach(function(box){
   var ed=box.querySelector(".wordSectionText"),layer=box.querySelector(".wordSectionChords");if(!ed||!layer)return;
