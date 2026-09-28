@@ -67,6 +67,7 @@ var state;
 try{state=JSON.parse(localStorage.getItem(STORAGE));}catch(e){state=null;}
 if(!state||!state.songs)state=fresh();
 if(!state.session)state=fresh();
+Object.keys(state.songs).forEach(function(id){var s=state.songs[id];if(s&&s.title==="New Song"&&s.artist==="Unknown"&&s.source&&s.source.type==="Manual")delete state.songs[id];});
 function save(){try{localStorage.setItem(STORAGE,JSON.stringify(state));}catch(e){}}
 function currentSong(){return state.session.edit?state.session.draft:state.songs[state.session.songId];}
 function transpose(chord,shift){
@@ -164,12 +165,12 @@ function renderLyrics(s){
  if(state.session.edit){renderFreeEditor(el,s);}else{var out="";s.sections.forEach(function(sec){out+='<section class="section"><h3>'+esc(sec.name)+"</h3>";sec.lines.forEach(function(l){out+=displayLine(l);});out+="</section>";});el.innerHTML=out;}
 }
 function renderFreeEditor(el,s){
- var h='<div class="editorIntro"><b>Free-form editor</b><span>Type directly into the lyrics. Drag a chord chip and drop it where you want it over the words.</span></div>';
+ var h='<div class="editorIntro"><div><b>Free-form editor</b><span>Type directly into the lyrics. Drag a chord chip and drop it where you want it over the words.</span></div><div class="songMetaEdit"><label>Title<input class="songTitleEdit" value="'+esc(s.title)+'"></label><label>Artist<input class="songArtistEdit" value="'+esc(s.artist)+'"></label></div></div>';
  s.sections.forEach(function(sec,si){
   h+='<section class="section editSection"><div class="sectionHead"><input class="sectionName" data-si="'+si+'" value="'+esc(sec.name)+'"><button class="btn deleteSection" data-si="'+si+'">Delete section</button></div>';
   sec.lines.forEach(function(l,li){
    h+='<div class="freeLine" data-si="'+si+'" data-li="'+li+'"><div class="chordLane">';
-   l.chords.forEach(function(ch,ci){h+='<div class="dragChord" draggable="true" data-si="'+si+'" data-li="'+li+'" data-ci="'+ci+'">'+esc(ch.name)+' <button class="chipX" data-del="'+si+','+li+','+ci+'">×</button></div>';});
+   l.chords.forEach(function(ch,ci){h+='<div class="dragChord" draggable="true" data-si="'+si+'" data-li="'+li+'" data-ci="'+ci+'" title="Drag to move. Double-click to rename">'+esc(ch.name)+' <button class="chipX" data-del="'+si+','+li+','+ci+'">×</button></div>';});
    h+='<button class="btn addChordFree" data-si="'+si+'" data-li="'+li+'">＋ Chord</button></div><div class="freeText" contenteditable="plaintext-only" spellcheck="true">'+esc(l.text)+'</div><div class="lineHint">Drag chords onto the lyric line · edit or delete any words freely</div></div>';
   });
   h+='<button class="btn addLineFree" data-si="'+si+'">＋ Add line</button></section>';
@@ -179,6 +180,12 @@ function renderFreeEditor(el,s){
  bindFreeEditor();
 }
 function bindFreeEditor(){
+ var s=currentSong();
+ var ti=document.querySelector(".songTitleEdit"),ai=document.querySelector(".songArtistEdit");
+ if(ti)ti.oninput=function(){s.title=ti.value;};
+ if(ai)ai.oninput=function(){s.artist=ai.value;};
+ document.querySelectorAll(".dragChord").forEach(function(chip){chip.ondblclick=function(){var s=currentSong(),ch=s.sections[Number(chip.dataset.si)].lines[Number(chip.dataset.li)].chords[Number(chip.dataset.ci)],name=prompt("Chord name",ch.name);if(name&&name.trim()){ch.name=name.trim();renderSong();}};});
+ document.querySelectorAll(".deleteLine").forEach(function(b){b.onclick=function(){var s=currentSong(),sec=s.sections[Number(b.dataset.si)];if(sec.lines.length===1){alert("A section needs at least one line.");return;}if(confirm("Delete this lyric line and its chords?")){sec.lines.splice(Number(b.dataset.li),1);renderSong();}};});
  document.querySelectorAll(".freeText").forEach(function(t){t.addEventListener("input",function(){var row=t.closest(".freeLine"),l=currentSong().sections[Number(row.dataset.si)].lines[Number(row.dataset.li)];l.text=t.innerText.replace(/\u00a0/g," ");});});
  document.querySelectorAll(".sectionName").forEach(function(i){i.oninput=function(){currentSong().sections[Number(i.dataset.si)].name=i.value;};});
  document.querySelectorAll(".dragChord").forEach(function(chip){chip.addEventListener("dragstart",function(e){e.dataTransfer.setData("text/songbook-chord",JSON.stringify({si:Number(chip.dataset.si),li:Number(chip.dataset.li),ci:Number(chip.dataset.ci)}));e.dataTransfer.effectAllowed="move";});});
