@@ -154,13 +154,21 @@ function renderChords(s){
  el.style.position=state.settings.pin?"sticky":"static";
 }
 function displayLine(l){
- var text=l.text||"";if(!text)return '<div class="songLine"><div class="lineWords">'+l.chords.map(function(ch){return '<span class="wordCell"><span class="lineChord">'+esc(transpose(ch.name,state.settings.shift))+'</span><span>&nbsp;</span></span>';}).join("")+"</div></div>";
- var by={};l.chords.forEach(function(ch){var p=Math.max(0,Math.min(text.length,Number(ch.pos)||0));if(!by[p])by[p]=[];by[p].push(ch);});
- var cuts=[0,text.length];Object.keys(by).forEach(function(p){cuts.push(Number(p));});cuts.sort(function(a,b){return a-b;});
- var unique=[];cuts.forEach(function(x){if(unique.indexOf(x)<0)unique.push(x);});
+ var text=l.text||"", chords=(l.chords||[]).slice().sort(function(a,b){return (Number(a.pos)||0)-(Number(b.pos)||0);});
  var h='<div class="songLine"><div class="lineWords">';
- for(var i=0;i<unique.length-1;i++){var start=unique[i],end=unique[i+1],chs=by[start]||[];h+='<span class="wordCell"><span class="lineChord">'+(chs.length?chs.map(function(ch){return esc(transpose(ch.name,state.settings.shift));}).join(" "):"&nbsp;")+'</span><span>'+esc(text.slice(start,end))+"</span></span>";}
- return h+"</div></div>";
+ if(!text){
+  chords.forEach(function(ch){h+='<span class="displayChord">'+esc(transpose(ch.name,state.settings.shift))+'</span>';});
+  return h+'</div></div>';
+ }
+ var cursor=0;
+ chords.forEach(function(ch){
+  var p=Math.max(0,Math.min(text.length,Number(ch.pos)||0));
+  h+=esc(text.slice(cursor,p));
+  h+='<span class="displayChord">'+esc(transpose(ch.name,state.settings.shift))+'</span>';
+  cursor=p;
+ });
+ h+=esc(text.slice(cursor));
+ return h+'</div></div>';
 }
 function renderLyrics(s){
  var el=document.getElementById("lyrics");el.className="card lyrics"+(state.settings.view==="page"?" page":"");
@@ -197,6 +205,7 @@ function bindWordDocument(){
  var doc=document.querySelector(".songDocument");if(!doc)return;
  window.__songUndo=window.__songUndo||[];
  updateUndoButton();
+ doc.querySelectorAll(".docChord").forEach(function(chip){bindDocChord(chip,doc);});
  doc.addEventListener("beforeinput",function(e){
   if(e.inputType==="historyUndo"||e.inputType==="historyRedo")return;
   pushSongUndo(doc);
@@ -250,7 +259,7 @@ function updateUndoButton(){
  var b=document.getElementById("undoEditBtn");if(b)b.disabled=!(window.__songUndo&&window.__songUndo.length);
 }
 function bindPastedChords(doc){
- doc.querySelectorAll(".docChord").forEach(function(chip){chip.contentEditable="true";chip.spellcheck=false;});
+ doc.querySelectorAll(".docChord").forEach(function(chip){bindDocChord(chip,doc);});
 }
 function onDocChordMove(e){
  var d=window.__docChordDrag;if(!d)return;
