@@ -375,7 +375,7 @@ function bindDocChord(chip,doc){
      var t=r.startContainer;t.deleteData(r.startOffset-1,1);
      var nr=document.createRange();nr.setStart(t,Math.max(0,r.startOffset-1));nr.collapse(true);sel.removeAllRanges();sel.addRange(nr);
     }else if(chip.textContent.length){
-     chip.textContent=chip.textContent.slice(1);placeCaretAtEnd(chip);
+     chip.textContent=chip.textContent.slice(1);placeCaretAtOffset(chip,0);
     }
    }else if(chip.textContent.length){
     var pos=r.startOffset;
