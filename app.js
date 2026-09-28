@@ -273,16 +273,30 @@ function positionSectionChords(){
  document.querySelectorAll(".wordSectionEditor").forEach(function(box){
   var ed=box.querySelector(".wordSectionText"),layer=box.querySelector(".wordSectionChords");if(!ed||!layer)return;
   var si=Number(box.dataset.si),sec=currentSong().sections[si],nodes=Array.from(layer.querySelectorAll(".sectionChord"));
+  var er=ed.getBoundingClientRect();
   sec.lines.forEach(function(lineObj,li){
    var line=box.querySelector('.wordDocLine[data-li="'+li+'"]');if(!line)return;
-   (lineObj.chords||[]).forEach(function(ch,ci){
-    var node=nodes.find(function(n){return Number(n.dataset.li)===li&&Number(n.dataset.ci)===ci;});if(!node)return;
-    var text=normalizeSongText(lineObj.text||""),pos=Math.max(0,Math.min(text.length,Number(ch.pos)||0)),range=rangeAtTextOffset(line,pos);
-    if(!range)return;
-    var lr=line.getBoundingClientRect(),rr=range.getBoundingClientRect();
-    node.style.left=Math.max(0,rr.left-lr.left)+"px";
-    node.style.top="7px";
-   });
+   var lr=line.getBoundingClientRect();
+   var chords=lineObj.chords||[];
+   if(!String(lineObj.text||"").length){
+    var x=0;
+    chords.forEach(function(ch,ci){
+     var node=nodes.find(function(n){return Number(n.dataset.li)===li&&Number(n.dataset.ci)===ci;});if(!node)return;
+     node.style.left=x+"px";
+     node.style.top=Math.max(0,lr.top-er.top+2)+"px";
+     x+=node.offsetWidth+18;
+    });
+   }else{
+    chords.forEach(function(ch,ci){
+     var node=nodes.find(function(n){return Number(n.dataset.li)===li&&Number(n.dataset.ci)===ci;});if(!node)return;
+     var text=normalizeSongText(lineObj.text||"");
+     var pos=Math.max(0,Math.min(text.length,Number(ch.pos)||0));
+     var range=rangeAtTextOffset(line,pos);if(!range)return;
+     var rr=range.getBoundingClientRect();
+     node.style.left=Math.max(0,rr.left-er.left)+"px";
+     node.style.top=Math.max(0,lr.top-er.top+2)+"px";
+    });
+   }
   });
  });
 }
