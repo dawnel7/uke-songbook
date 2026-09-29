@@ -155,7 +155,7 @@ function renderChords(s){
 }
 function displayLine(l){
  var text=l.text||"", chords=(l.chords||[]).slice().sort(function(a,b){return (Number(a.pos)||0)-(Number(b.pos)||0);});
- var h='<div class="songLine"><div class="lineWords">';
+ var h='<div class="songLine"><div class="lineWords'+(!text&&chords.length?' chordOnlyLine':'')+'">';
  if(!text){
   chords.forEach(function(ch){h+='<span class="displayChord">'+esc(transpose(ch.name,state.settings.shift))+'</span>';});
   return h+'</div></div>';
@@ -188,7 +188,7 @@ function renderFreeEditor(el,s){
 }
 function renderDocLine(l,si,li){
  var text=normalizeSongText(l.text||""), chords=(l.chords||[]).slice().sort(function(a,b){return (Number(a.pos)||0)-(Number(b.pos)||0);});
- var h='<div class="docLine" data-li="'+li+'">';
+ var h='<div class="docLine'+(!text&&chords.length?' chordOnlyLine':'')+'" data-li="'+li+'">';
  var cursor=0;
  chords.forEach(function(ch){
   var p=Math.max(0,Math.min(text.length,Number(ch.pos)||0));
@@ -361,29 +361,40 @@ function mergeNextIfAtEnd(doc){
 function bindDocChord(chip,doc){
  chip.contentEditable="true";chip.spellcheck=false;
  chip.addEventListener("keydown",function(e){
-  if(e.key==="Enter"){e.preventDefault();e.stopPropagation();doc.focus();return;}
+  if(e.key==="Enter"){e.preventDefault();e.stopPropagation();placeCaretAtEnd(chip);return;}
+  if(e.ctrlKey||e.metaKey||e.altKey)return;
+  var sel=window.getSelection(),r=sel&&sel.rangeCount?sel.getRangeAt(0):null;
+  if(!r||!chip.contains(r.startContainer))return;
+
   if(e.key==="Backspace"||e.key==="Delete"){
-   e.stopPropagation();
-   e.preventDefault();
-   var sel=window.getSelection();
-   var r=sel&&sel.rangeCount?sel.getRangeAt(0):null;
-   if(!r)return;
+   e.preventDefault();e.stopPropagation();
+   var start=0,end=0;
    if(!r.collapsed){
-    r.deleteContents();
-   }else if(e.key==="Backspace"){
-    if(r.startContainer.nodeType===3&&r.startOffset>0){
-     var t=r.startContainer;t.deleteData(r.startOffset-1,1);
-     var nr=document.createRange();nr.setStart(t,Math.max(0,r.startOffset-1));nr.collapse(true);sel.removeAllRanges();sel.addRange(nr);
-    }else if(chip.textContent.length){
-     chip.textContent=chip.textContent.slice(1);placeCaretAtOffset(chip,0);
-    }
-   }else if(chip.textContent.length){
-    var pos=r.startOffset;
-    if(r.startContainer===chip)pos=Math.min(pos,chip.textContent.length);
-    chip.textContent=chip.textContent.slice(0,pos)+chip.textContent.slice(pos+1);placeCaretAtOffset(chip,pos);
+    var rr=r.cloneRange();rr.setStart(chip,0);start=rr.toString().length;
+    end=start+r.toString().length;
+   }else{
+    start=r.startContainer.nodeType===3?r.startOffset:0;
+    end=start;
+    if(e.key==="Backspace"){if(start===0)return;start--;}
+    else{if(start>=chip.textContent.length)return;end++;}
    }
+   var value=chip.textContent;
+   chip.textContent=value.slice(0,start)+value.slice(end);
+   placeCaretAtOffset(chip,start);
    syncWordDocument(doc);
    return;
+  }
+
+  // Handle ordinary character entry ourselves so the caret cannot fall through
+  // the nested contenteditable into the lyric text.
+  if(e.key.length===1){
+   e.preventDefault();e.stopPropagation();
+   var pos=r.collapsed?(r.startContainer.nodeType===3?r.startOffset:0):0;
+   var del=r.collapsed?0:r.toString().length;
+   var value=chip.textContent;
+   chip.textContent=value.slice(0,pos)+e.key+value.slice(pos+del);
+   placeCaretAtOffset(chip,pos+e.key.length);
+   syncWordDocument(doc);
   }
  });
 }
