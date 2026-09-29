@@ -147,3 +147,34 @@ body.chordDragging{user-select:none}
   z-index:2;
   vertical-align:baseline;
 }
+
+
+/* Chord-only lines (e.g. INTRO / BREAK) should lay chords out side-by-side. */
+.chordOnlyLine{
+  display:flex;
+  align-items:flex-end;
+  gap:2.2em;
+  min-height:1.5em;
+}
+.chordOnlyLine .displayChord{
+  position:static;
+  width:auto;
+  display:inline-block;
+  margin:0;
+  transform:none;
+}
+.songDocument .chordOnlyLine{
+  display:block;
+  white-space:normal;
+  padding-top:1.12em;
+}
+.songDocument .chordOnlyLine .docChord{
+  position:relative;
+  top:-1.18em;
+  width:auto;
+  display:inline-block;
+  margin-right:2.2em;
+}
+.songDocument .chordOnlyLine .docChord:last-child{
+  margin-right:0;
+}
