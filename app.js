@@ -462,11 +462,56 @@ function insertNodeAtRange(range,node){
  }
 }
 function caretRangeIn(root,x,y){
+ var lines=Array.from(root.querySelectorAll(".docLine"));
+ var best=null,bestDist=Infinity;
+
+ function considerWord(node,start,end){
+  var rr=document.createRange();
+  rr.setStart(node,start);
+  rr.setEnd(node,end);
+  var rects=Array.from(rr.getClientRects());
+  if(!rects.length)return;
+  var rect=rects[0];
+  var cx=Math.max(rect.left,Math.min(rect.right,x));
+  var cy=Math.max(rect.top,Math.min(rect.bottom,y));
+  var d=Math.hypot(x-cx,y-cy);
+  if(d<bestDist){
+   bestDist=d;
+   best={node:node,offset:start};
+  }
+ }
+
+ lines.forEach(function(line){
+  var walker=document.createTreeWalker(line,NodeFilter.SHOW_TEXT,{
+   acceptNode:function(node){
+    return node.parentElement&&node.parentElement.closest(".docChord")
+      ?NodeFilter.FILTER_REJECT
+      :NodeFilter.FILTER_ACCEPT;
+   }
+  });
+  var node;
+  while(node=walker.nextNode()){
+   var value=node.nodeValue||"",m,re=/\S+/g;
+   while((m=re.exec(value)))considerWord(node,m.index,re.lastIndex);
+  }
+ });
+
+ if(best){
+  var r=document.createRange();
+  r.setStart(best.node,best.offset);
+  r.collapse(true);
+  return r;
+ }
+
+ // Fallback for empty/chord-only lines or browsers without usable word rects.
  var r=null;
- if(document.caretPositionFromPoint){var p=document.caretPositionFromPoint(x,y);if(p){r=document.createRange();r.setStart(p.offsetNode,p.offset);r.collapse(true);}}
+ if(document.caretPositionFromPoint){
+  var p=document.caretPositionFromPoint(x,y);
+  if(p){r=document.createRange();r.setStart(p.offsetNode,p.offset);r.collapse(true);}
+ }
  if(!r&&document.caretRangeFromPoint)r=document.caretRangeFromPoint(x,y);
  if(!r||!root.contains(r.startContainer))return null;
- var chord=r.startContainer.nodeType===1?r.startContainer.closest&&r.startContainer.closest(".docChord"):r.startContainer.parentElement&&r.startContainer.parentElement.closest(".docChord");
+ var chord=r.startContainer.nodeType===1?r.startContainer.closest&&r.startContainer.closest(".docChord"):r.startContainer.parentElement&&r.startContainer.parentElement.closest&&r.startContainer.parentElement.closest(".docChord");
  if(chord){var rr=document.createRange();rr.selectNode(chord);rr.collapse(false);return rr;}
  return r;
 }
