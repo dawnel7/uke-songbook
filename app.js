@@ -436,78 +436,13 @@ function onDocChordUp(e){
  d.chip.style.transform="";
  window.__docChordDrag=null;
  if(!d.moved)return;
-
- var doc=d.chip.closest(".songDocument");
- var range=chordDropRange(doc,e.clientX,e.clientY,d.chip);
- if(!range)return;
+ var doc=d.chip.closest(".songDocument"),range=caretRangeIn(doc,e.clientX,e.clientY);if(!range)return;
  if(range.startContainer===d.chip||d.chip.contains(range.startContainer))return;
-
- // Save the pre-move state so Undo can restore the chord's previous position.
  pushSongUndo(doc);
-
  d.chip.remove();
  insertNodeAtRange(range,d.chip);
  syncWordDocument(doc);
  updateUndoButton();
-}
-function chordDropRange(doc,x,y,chip){
- if(!doc)return null;
-
- var lines=Array.from(doc.querySelectorAll(".docLine"));
- var target=null,best=Infinity;
- lines.forEach(function(line){
-  if(line.contains(chip))return;
-  var r=line.getBoundingClientRect();
-  var cy=Math.max(r.top,Math.min(r.bottom,y));
-  var d=Math.abs(y-cy);
-  if(d<best){best=d;target=line;}
- });
- if(!target)return null;
-
- var rect=target.getBoundingClientRect();
- var probeY=rect.top+Math.max(1,rect.height*.72);
- var range=caretRangeIn(doc,x,probeY);
- if(!range)return null;
-
- // Never drop into a chord span.
- var hit=range.startContainer.nodeType===1
-   ? range.startContainer.closest&&range.startContainer.closest(".docChord")
-   : range.startContainer.parentElement&&range.startContainer.parentElement.closest&&range.startContainer.parentElement.closest(".docChord");
- if(hit)return null;
- if(!target.contains(range.startContainer))return null;
-
- var node=range.startContainer;
- var offset=range.startOffset||0;
-
- // Resolve an element range to its nearest text node.
- if(node.nodeType!==3){
-  var child=node.childNodes[Math.min(offset,node.childNodes.length-1)];
-  if(child&&child.nodeType===3){node=child;offset=0;}
- }
- if(node&&node.nodeType===3){
-  var value=node.nodeValue||"";
-  var words=[],m,re=/\S+/g;
-  while((m=re.exec(value)))words.push({start:m.index,end:re.lastIndex});
-  if(words.length){
-   var chosen=words[0],chosenDist=Infinity;
-   words.forEach(function(w){
-    var dist=offset<w.start?w.start-offset:(offset>w.end?offset-w.end:0);
-    if(dist<chosenDist){chosen=w;chosenDist=dist;}
-   });
-   var rr=document.createRange();
-   rr.setStart(node,chosen.start);
-   rr.collapse(true);
-   return rr;
-  }
-
-  // Blank/whitespace-only text node: put the chord at its beginning.
-  var blank=document.createRange();
-  blank.setStart(node,0);
-  blank.collapse(true);
-  return blank;
- }
-
- return range;
 }
 function insertNodeAtRange(range,node){
  var r=range.cloneRange();r.collapse(true);
@@ -582,6 +517,17 @@ function mergeNextIfAtEnd(doc){
  while(next.firstChild)line.appendChild(next.firstChild);
  next.remove();
  var sel=window.getSelection();sel.removeAllRanges();sel.addRange(caret);doc.focus();syncWordDocument(doc);return true;
+}
+function bindWordDocument(){
+ var doc=document.querySelector(".songDocument");
+ if(!doc)return;
+ bindPastedChords(doc);
+ var undoBtn=document.getElementById("undoEditBtn");
+ if(undoBtn)undoBtn.onclick=function(e){
+  e.preventDefault();
+  undoSongEdit(doc);
+ };
+ updateUndoButton();
 }
 function bindDocChord(chip,doc){
  chip.contentEditable="true";chip.spellcheck=false;
