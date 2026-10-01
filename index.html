@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#526b4d"><title>Your Songbook</title><link rel="stylesheet" href="styles.css?v=20260930a">
+<meta name="theme-color" content="#526b4d"><title>Your Songbook</title><link rel="stylesheet" href="styles.css?v=20261001a">
 </head>
 <body>
-<header><button id="back" class="icon hidden">←</button><b>🎵 Your Songbook</b><div id="headerAutoScroll" class="headerAutoScroll hidden"><span>Auto-scroll</span><div class="headerAutoChoices"><button type="button" class="headerAutoChoice" data-speed="0">0</button><button type="button" class="headerAutoChoice" data-speed="1">1</button><button type="button" class="headerAutoChoice" data-speed="2">2</button><button type="button" class="headerAutoChoice" data-speed="3">3</button><button type="button" class="headerAutoChoice" data-speed="4">4</button><button type="button" class="headerAutoChoice" data-speed="5">5</button></div></div><nav id="topNav"><button data-view="library" class="navbtn active">Library</button><button data-view="sets" class="navbtn">Setlists</button><button data-view="import" class="navbtn">Import</button></nav></header>
+<header><button id="back" class="icon hidden">←</button><b>🎵 Your Songbook</b><div id="headerChordBar" class="headerChordBar hidden"></div><div id="headerAutoScroll" class="headerAutoScroll hidden"><span>Auto-scroll</span><div class="headerAutoChoices"><button type="button" class="headerAutoChoice" data-speed="0">0</button><button type="button" class="headerAutoChoice" data-speed="1">1</button><button type="button" class="headerAutoChoice" data-speed="2">2</button><button type="button" class="headerAutoChoice" data-speed="3">3</button><button type="button" class="headerAutoChoice" data-speed="4">4</button><button type="button" class="headerAutoChoice" data-speed="5">5</button></div></div><nav id="topNav"><button data-view="library" class="navbtn active">Library</button><button data-view="sets" class="navbtn">Setlists</button><button data-view="import" class="navbtn">Import</button></nav></header>
 <main>
 <section id="libraryView" class="view"><div class="hero card"><div><div class="eyebrow">YOUR SONGBOOK</div><h1>Music you know. Your way.</h1><p class="sub">Editable lyrics + chords · Baritone · Soprano · Guitar</p></div><button id="newSong" class="primary">＋ New song</button></div><div class="card"><input id="search" class="search" placeholder="Search songs, artists, genres or moods…"><div id="libraryList"></div></div></section>
 <section id="songView" class="view hidden"><div class="card title"><div><div class="eyebrow" id="songMeta"></div><h1 id="songTitle"></h1><p class="sub" id="songDetails"></p></div><div class="titleActions"><button id="songEdit" class="primary">Edit</button><button id="songMenu" class="btn">⋯</button></div></div>
@@ -18,4 +18,4 @@
 <div id="importReview" class="card hidden"></div></section>
 </main>
 <div id="modal" class="modal hidden"><div class="modalCard"><div id="modalContent"></div><div class="modalActions"><button id="modalCancel" class="btn">Cancel</button><button id="modalSave" class="primary">Save</button></div></div></div>
-<script src="app.js?v=20260930c"></script></body></html>
+<script src="app.js?v=20261001a"></script></body></html>
