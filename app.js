@@ -72,7 +72,8 @@ var state;
 try{state=JSON.parse(localStorage.getItem(STORAGE));}catch(e){state=null;}
 if(!state||!state.songs)state=fresh();
 if(!state.session)state=fresh();
-if(!state.settings)state=fresh().settings;\nif(state.settings.autoScroll==null)state.settings.autoScroll=0;
+if(!state.settings)state=fresh().settings;
+if(state.settings.autoScroll==null)state.settings.autoScroll=0;
 if(!state.songs||Object.keys(state.songs).length===0){state.songs={hallelujah:makeSong()};}
 if(!state.songs.hallelujah){state.songs.hallelujah=makeSong();}
 Object.keys(state.songs).forEach(function(id){var s=state.songs[id];if(s&&s.title==="New Song"&&s.artist==="Unknown"&&s.source&&s.source.type==="Manual")delete state.songs[id];});
@@ -321,7 +322,9 @@ function renderDocLine(l,si,li){
  if(!text&&!(l.chords||[]).length)h+='<br>';
  return h+'</div>';
 }
-function normalizeSongText(v){return String(v||"").replace(/\\\\n/g,"\\n").replace(/\\r/g,"");}
+function normalizeSongText(v){return String(v||"").replace(/\\\
+/g,"\
+").replace(/\\r/g,"");}
 function bindWordDocument(){
  var doc=document.querySelector(".songDocument");if(!doc)return;
  window.__songUndo=window.__songUndo||[];
@@ -636,7 +639,8 @@ function renderPerformance(){
 function renderImport(){document.getElementById("importStatus").textContent=state.pendingFile?"Attached: "+state.pendingFile.name:"";}
 function parseImport(raw){
  var sections=[{name:"Imported song",lines:[]}],current=sections[0];
- raw.split(/\r?\n/).forEach(function(rawLine){
+ raw.split(/\r?
+/).forEach(function(rawLine){
   var lineText=rawLine.trim();if(!lineText)return;
   if(/^(intro|verse|chorus|bridge|outro|break|final chorus)\s*:??$/i.test(lineText)){current={name:lineText.replace(/:$/,""),lines:[]};sections.push(current);return;}
   var chords=[],re=/(^|\s)([A-G](?:#|b)?(?:m|maj7|7|sus2|sus4|dim|aug)?)(?=\s|$)/g,m;
