@@ -376,3 +376,27 @@ header .headerChordBar.hidden{display:none!important}
   line-height:1;
   z-index:2;
 }
+
+
+/* Song editor personalization */
+.chordSubPanel{
+  margin:0 0 18px;
+  padding:12px 14px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:#fffdf8;
+}
+.editSubTitle{font-weight:850;color:var(--ink);margin-bottom:4px}
+.chordSubRow{display:flex;align-items:center;gap:8px;margin-top:9px;flex-wrap:wrap}
+.chordSubInput{flex:1 1 150px;min-width:120px;padding:8px 10px;border:1px solid var(--line);border-radius:7px;font:inherit}
+.substitutionList{display:flex;flex-direction:column;gap:6px;margin-top:9px}
+.substitutionItem{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 8px;border-radius:7px;background:#f2f6ef;color:var(--ink)}
+.substitutionItem .btn{padding:5px 8px;font-size:12px}
+.wordEditActions{flex-wrap:wrap}
+@media(max-width:750px){
+  .wordEditActions{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .wordEditActions .btn,.wordEditActions .primary{width:100%}
+  .chordSubRow{display:grid;grid-template-columns:1fr auto 1fr;gap:6px}
+  .chordSubRow .btn{grid-column:1 / -1}
+  .chordSubInput{min-width:0;width:100%;box-sizing:border-box}
+}
