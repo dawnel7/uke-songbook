@@ -223,7 +223,7 @@ body.chordDragging{user-select:none}
 
 
 /* Compact auto-scroll control in the sticky header */
-.headerAutoScroll{display:flex;align-items:center;gap:6px;margin-left:auto}
+.headerAutoScroll{display:flex;align-items:center;gap:6px;margin-left:clamp(24px,6vw,80px)}
 .headerAutoScroll>span{font-size:10px;font-weight:800;opacity:.9;white-space:nowrap}
 .headerAutoChoices{display:flex;gap:3px}
 .headerAutoChoice{width:23px;height:23px;padding:0;border:1px solid #ffffff66;border-radius:5px;background:#ffffff18;color:white;font-size:11px;font-weight:800;cursor:pointer}
@@ -292,4 +292,13 @@ header .headerChordBar.hidden{display:none!important}
   header .headerChordBar{max-width:34vw}
   .headerChordItem{width:31px;min-width:31px}
   .headerChordDiagram,.headerChordDiagram .fretSvg{width:27px;height:24px}
+}
+
+/* Song title replaces the header brand only while viewing a song. */
+#headerBrand{max-width:24vw;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:900px){
+  #headerBrand{max-width:22vw}
+}
+@media(max-width:750px){
+  #headerBrand{max-width:28vw}
 }
