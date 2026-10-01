@@ -195,7 +195,7 @@ body.chordDragging{user-select:none}
 .controlGrid .transposeRow .btn{white-space:nowrap}
 .transposeRow .transposeKey{min-width:112px;text-align:center;font-size:16px;color:var(--muted);font-weight:650;padding:10px 4px}
 .transposeRow .transposeKey b{color:var(--ink);font-size:18px}
-@media(max-width:750px){.transposeRow{grid-column:1}.transposeRow .transposeKey{order:3;flex:1}.transposeRow #pinToggle{flex-basis:100%}}
+@media(max-width:750px){.transposeRow{grid-column:1}.transposeRow .transposeKey{order:3;flex:1}}
 
 /* Compact horizontal auto-scroll control */
 .autoScrollControl{margin-top:10px;padding-top:8px;border-top:1px solid var(--line)}
