@@ -430,11 +430,82 @@ function onDocChordUp(e){
  d.chip.style.transform="";
  window.__docChordDrag=null;
  if(!d.moved)return;
- var doc=d.chip.closest(".songDocument"),range=caretRangeIn(doc,e.clientX,e.clientY);if(!range)return;
+
+ var doc=d.chip.closest(".songDocument");
+ var range=chordDropRange(doc,e.clientX,e.clientY,d.chip);
+ if(!range)return;
  if(range.startContainer===d.chip||d.chip.contains(range.startContainer))return;
+
+ // Save the pre-move state so Undo can restore the chord's previous position.
+ pushSongUndo(doc);
+
  d.chip.remove();
  insertNodeAtRange(range,d.chip);
  syncWordDocument(doc);
+ updateUndoButton();
+}
+function chordDropRange(doc,x,y,chip){
+ if(!doc)return null;
+
+ // Find the lyric line under the pointer, using the lower portion of the
+ // line so an existing chord above the lyrics cannot capture the drop.
+ var lines=Array.from(doc.querySelectorAll(".docLine")).filter(function(line){
+  return line!==chip.parentElement;
+ });
+ var target=null,best=Infinity;
+ lines.forEach(function(line){
+  var r=line.getBoundingClientRect();
+  var cy=Math.max(r.top,Math.min(r.bottom,y));
+  var d=Math.abs(y-cy);
+  if(d<best){best=d;target=line;}
+ });
+ if(!target)return null;
+
+ var rect=target.getBoundingClientRect();
+ var probeY=rect.top+Math.max(1,rect.height*.72);
+ var range=caretRangeIn(doc,x,probeY);
+ if(!range)return null;
+
+ // If the browser still landed inside a chord, use a point on the lyric
+ // baseline instead.
+ if(range.startContainer.nodeType===1&&range.startContainer.closest&&range.startContainer.closest(".docChord") ||
+    range.startContainer.parentElement&&range.startContainer.parentElement.closest&&range.startContainer.parentElement.closest(".docChord")){
+  range=null;
+ }
+ if(!range){
+  if(document.caretPositionFromPoint){
+   var p=document.caretPositionFromPoint(x,probeY);
+   if(p){range=document.createRange();range.setStart(p.offsetNode,p.offset);range.collapse(true);}
+  }
+  if(!range&&document.caretRangeFromPoint)range=document.caretRangeFromPoint(x,probeY);
+ }
+ if(!range||!target.contains(range.startContainer))return null;
+
+ // Snap the drop to a whole lyric word rather than inserting the chord into
+ // the middle of a word. This keeps the chord visually above the word.
+ var node=range.startContainer;
+ if(node.nodeType!==3){
+  var child=node.childNodes[Math.min(range.startOffset,node.childNodes.length-1)];
+  if(child&&child.nodeType===3)node=child;
+ }
+ if(node&&node.nodeType===3&&!node.parentElement.closest(".docChord")){
+  var value=node.nodeValue||"",off=Math.max(0,Math.min(value.length,range.startOffset||0));
+  var words=[],m,re=/\\S+/g;
+  while((m=re.exec(value)))words.push({start:m.index,end:re.lastIndex});
+  if(words.length){
+   var chosen=words[0];
+   words.forEach(function(w){
+    var dist=off<w.start?w.start-off:(off>w.end?off-w.end:0);
+    var chosenDist=off<chosen.start?chosen.start-off:(off>chosen.end?off-chosen.end:0);
+    if(dist<chosenDist)chosen=w;
+   });
+   var rr=document.createRange();
+   rr.setStart(node,chosen.start);
+   rr.collapse(true);
+   return rr;
+  }
+ }
+ return range;
 }
 function insertNodeAtRange(range,node){
  var r=range.cloneRange();r.collapse(true);
