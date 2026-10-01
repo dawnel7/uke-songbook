@@ -83,34 +83,22 @@ function save(){
 }
 if(!state.sets)state.sets={};
 if(state.pendingFile===undefined)state.pendingFile=null;
-var autoScrollFrame=null;
-var autoScrollLast=0;
-var autoScrollRemainder=0;
+var autoScrollTimer=null;
 function stopAutoScroll(){
- if(autoScrollFrame){cancelAnimationFrame(autoScrollFrame);autoScrollFrame=null;}
- autoScrollLast=0;
- autoScrollRemainder=0;
+ if(autoScrollTimer){clearInterval(autoScrollTimer);autoScrollTimer=null;}
 }
-function autoScrollStep(ts){
+function autoScrollTick(){
  if(!state.settings||state.settings.view!=="scroll"||state.settings.autoScroll<=0||state.session.view!=="song"||state.session.edit){stopAutoScroll();return;}
- if(!autoScrollLast)autoScrollLast=ts;
- var dt=Math.min(80,ts-autoScrollLast)/1000;autoScrollLast=ts;
- var speed=[0,4,8,18,36,60][state.settings.autoScroll]||0;
  var max=Math.max(0,document.documentElement.scrollHeight-window.innerHeight);
- var current=window.scrollY||document.documentElement.scrollTop||document.body.scrollTop||0;
+ var current=Math.round(window.scrollY||document.documentElement.scrollTop||document.body.scrollTop||0);
  if(max<=0||current>=max-1){stopAutoScroll();return;}
- autoScrollRemainder+=speed*dt;
- if(autoScrollRemainder>0){
-  var next=Math.min(max,current+autoScrollRemainder);
-  window.scrollTo(0,next);
-  autoScrollRemainder-=next-current;
- }
- autoScrollFrame=requestAnimationFrame(autoScrollStep);
+ var step=[0,1,2,3,5,7][state.settings.autoScroll]||0;
+ window.scrollBy(0,step);
 }
 function startAutoScroll(){
  stopAutoScroll();
  if(state.settings.view==="scroll"&&state.settings.autoScroll>0&&!state.session.edit){
-  autoScrollFrame=requestAnimationFrame(autoScrollStep);
+  autoScrollTimer=setInterval(autoScrollTick,40);
  }
 }
 function syncAutoScrollControl(){
@@ -289,7 +277,15 @@ function renderChords(s){
  var el=document.getElementById("chords");
  el.innerHTML=chordNames(s).map(function(n){var x=transpose(n,state.settings.shift);return '<div class="chordbox"><div class="chordname">'+esc(x)+'</div><div class="diagram">'+fretDiagram(x)+'</div></div>';}).join("");
  el.style.position=state.settings.pin?"sticky":"static";
- el.style.top=state.settings.view==="scroll"?"132px":"64px";
+ if(state.settings.pin&&state.settings.view==="scroll"){
+  var header=document.querySelector("header");
+  var controls=document.querySelector(".controls");
+  var headerH=header?header.getBoundingClientRect().height:64;
+  var controlsH=controls?controls.getBoundingClientRect().height:0;
+  el.style.top=Math.ceil(headerH+controlsH+2)+"px";
+ }else{
+  el.style.top=state.settings.view==="scroll"?"64px":"64px";
+ }
 }
 function displayLine(l){
  var text=l.text||"", chords=(l.chords||[]).slice().sort(function(a,b){return (Number(a.pos)||0)-(Number(b.pos)||0);});
