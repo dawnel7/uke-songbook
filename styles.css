@@ -185,10 +185,11 @@ body.chordDragging{user-select:none}
 .transposeRow .transposeKey b{color:var(--ink);font-size:18px}
 @media(max-width:750px){.transposeRow .transposeKey{order:3;flex:1}.transposeRow #pinToggle{flex-basis:100%}}
 
-/* Auto-scroll control */
+/* Compact horizontal auto-scroll control */
 .autoScrollControl{margin-top:10px;padding-top:8px;border-top:1px solid var(--line)}
-.autoScrollLabel{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:13px;font-weight:700}
-.autoScrollLabel b{color:var(--green);font-size:17px}
-#autoScroll{display:block;width:100%;margin:6px 0 2px;accent-color:var(--green)}
-.autoScrollScale{display:flex;justify-content:space-between;color:var(--muted);font-size:10px}
-#autoScroll:disabled{opacity:.45}
+.autoScrollLabel{color:var(--muted);font-size:12px;font-weight:750;margin-bottom:5px}
+.autoScrollChoices{display:flex;gap:4px;width:100%}
+.autoScrollChoice{flex:1;min-width:0;height:30px;padding:0;border:1px solid var(--line);border-radius:7px;background:white;color:var(--muted);font-size:13px;font-weight:800;cursor:pointer}
+.autoScrollChoice.active{background:var(--green);border-color:var(--green);color:white}
+.autoScrollChoice:disabled{opacity:.4;cursor:default}
+.autoScrollScale{display:flex;justify-content:space-between;color:var(--muted);font-size:9px;margin-top:3px}
