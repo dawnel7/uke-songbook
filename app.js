@@ -330,12 +330,28 @@ function displayLine(l){
   chords.forEach(function(ch){h+='<span class="displayChord">'+esc(transpose(ch.name,state.settings.shift))+'</span>';});
   return h+'</div></div>';
  }
- var cursor=0;
+ var words=[],m;
+ var re=/\\S+/g;
+ while((m=re.exec(text)))words.push({text:m[0],start:m.index,end:re.lastIndex});
+ var chordByWord=words.map(function(){return[];});
  chords.forEach(function(ch){
   var p=Math.max(0,Math.min(text.length,Number(ch.pos)||0));
-  h+=esc(text.slice(cursor,p));
-  h+='<span class="displayChord">'+esc(transpose(ch.name,state.settings.shift))+'</span>';
-  cursor=p;
+  if(!words.length)return;
+  var best=0,bestDist=Infinity;
+  words.forEach(function(w,i){
+   var d=Math.abs(w.start-p);
+   if(d<bestDist){bestDist=d;best=i;}
+  });
+  chordByWord[best].push(ch);
+ });
+ var cursor=0;
+ words.forEach(function(w,i){
+  h+=esc(text.slice(cursor,w.start));
+  h+='<span class="displayWordCell">';
+  h+='<span class="displayChordStack">';
+  chordByWord[i].forEach(function(ch){h+='<span class="displayChord">'+esc(transpose(ch.name,state.settings.shift))+'</span>';});
+  h+='</span><span class="displayWord">'+esc(w.text)+'</span></span>';
+  cursor=w.end;
  });
  h+=esc(text.slice(cursor));
  return h+'</div></div>';
