@@ -322,43 +322,7 @@ function renderDocLine(l,si,li){
  if(!text&&!(l.chords||[]).length)h+='<br>';
  return h+'</div>';
 }
-function normalizeSongText(v){return String(v||"").replace(/\\\
-/g,"\
-").replace(/\\r/g,"");}
-function bindWordDocument(){
- var doc=document.querySelector(".songDocument");if(!doc)return;
- window.__songUndo=window.__songUndo||[];
- updateUndoButton();
- doc.querySelectorAll(".docChord").forEach(function(chip){bindDocChord(chip,doc);});
- doc.addEventListener("beforeinput",function(e){
-  if(e.inputType==="historyUndo"||e.inputType==="historyRedo")return;
-  pushSongUndo(doc);
- });
- doc.addEventListener("input",function(){syncWordDocument(doc);});
- doc.addEventListener("keydown",function(e){
-  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"){e.preventDefault();undoSongEdit(doc);return;}
-  if((e.ctrlKey||e.metaKey)&&e.shiftKey&&e.key.toLowerCase()==="c"){e.preventDefault();insertChordAtCaret(doc);return;}
-  if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();splitDocLine(doc);return;}
-  if(e.key==="Backspace"&&!e.shiftKey){if(mergePreviousIfAtStart(doc)){e.preventDefault();return;}}
-  if(e.key==="Delete"&&!e.shiftKey){if(mergeNextIfAtEnd(doc)){e.preventDefault();return;}}
- });
- doc.addEventListener("paste",function(){setTimeout(function(){sanitizePastedDoc(doc);syncWordDocument(doc);bindPastedChords(doc);},0);});
- doc.addEventListener("pointerdown",function(e){
-  var chip=e.target.closest&&e.target.closest(".docChord");if(!chip||e.button!==0)return;
-  window.__docChordDrag={chip:chip,startX:e.clientX,startY:e.clientY,moved:false};
-  chip.classList.add("docChordPending");
-  window.addEventListener("pointermove",onDocChordMove);
-  window.addEventListener("pointerup",onDocChordUp,{once:true});
- });
- doc.addEventListener("dblclick",function(e){
-  var chip=e.target.closest&&e.target.closest(".docChord");if(!chip)return;
-  e.preventDefault();e.stopPropagation();
-  var r=document.createRange();r.selectNodeContents(chip);
-  var sel=window.getSelection();sel.removeAllRanges();sel.addRange(r);doc.focus();
- });
- var add=document.getElementById("insertChordBtn");if(add)add.onclick=function(){insertChordAtCaret(doc);};
- var undo=document.getElementById("undoEditBtn");if(undo)undo.onclick=function(){undoSongEdit(doc);};
-}
+function normalizeSongText(v){return String(v||"").replace(/\r/g,"");}
 function pushSongUndo(doc){
  if(!doc||window.__restoringUndo)return;
  var snap=JSON.stringify(currentSong().sections);
@@ -639,8 +603,7 @@ function renderPerformance(){
 function renderImport(){document.getElementById("importStatus").textContent=state.pendingFile?"Attached: "+state.pendingFile.name:"";}
 function parseImport(raw){
  var sections=[{name:"Imported song",lines:[]}],current=sections[0];
- raw.split(/\r?
-/).forEach(function(rawLine){
+ raw.split(/\r?\n/).forEach(function(rawLine){
   var lineText=rawLine.trim();if(!lineText)return;
   if(/^(intro|verse|chorus|bridge|outro|break|final chorus)\s*:??$/i.test(lineText)){current={name:lineText.replace(/:$/,""),lines:[]};sections.push(current);return;}
   var chords=[],re=/(^|\s)([A-G](?:#|b)?(?:m|maj7|7|sus2|sus4|dim|aug)?)(?=\s|$)/g,m;
