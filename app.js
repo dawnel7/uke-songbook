@@ -82,6 +82,61 @@ function transpose(chord,shift){
  var i=pitchIndex(m[1]);if(i<0)return chord;
  return DISPLAY_NOTES[(i+shift+120)%12]+m[2];
 }
+var GENERATED_SHAPES={};
+var GENERATED_FINGERS={};
+var CHORD_INTERVALS={
+ "":[0,4,7],m:[0,3,7],"7":[0,4,7,10],m7:[0,3,7,10],
+ "6":[0,4,7,9],m6:[0,3,7,9],sus4:[0,5,7],dim:[0,3,6],
+ aug:[0,4,8],maj7:[0,4,7,11],"9":[0,4,7,10,14]
+};
+var TUNINGS={baritone:[2,7,11,4],soprano:[7,0,4,9],guitar:[4,9,2,7,11,4]};
+function generatedChord(name){
+ var m=String(name).match(/^([A-G](?:#|b)?)(.*)$/);if(!m)return null;
+ var root=pitchIndex(m[1]),suffix=m[2]||"",ints=CHORD_INTERVALS[suffix];
+ if(root<0||!ints)return null;
+ var inst=state.settings.instrument,key=inst+"|"+name;
+ if(GENERATED_SHAPES[key])return GENERATED_SHAPES[key];
+ var tuning=TUNINGS[inst];if(!tuning)return null;
+ var pcs={};ints.forEach(function(x){pcs[(root+x)%12]=true;});
+ var options=inst==="guitar"?[null,0,1,2,3,4]:[null,0,1,2,3,4];
+ var best=null,bestScore=-Infinity;
+ function walk(i,arr){
+  if(i===tuning.length){
+   var sounding=arr.filter(function(v){return v!==null;});
+   if(!sounding.length)return;
+   var notes=sounding.map(function(v,j){return (tuning[j]+v)%12;});
+   if(notes.indexOf(root)<0)return;
+   for(var n=0;n<notes.length;n++)if(!pcs[notes[n]])return;
+   var unique={};notes.forEach(function(n){unique[n]=true;});
+   if(Object.keys(unique).length<Math.min(3,Object.keys(pcs).length))return;
+   var score=0,zeros=0,muted=0,sum=0,min=99,max=0;
+   arr.forEach(function(v){if(v===null){muted++;return;}if(v===0)zeros++;sum+=v;min=Math.min(min,v);max=Math.max(max,v);});
+   if(max-min>4)return;
+   score=zeros*3-sum*.15-muted*1.5-(max-min)*.3;
+   if(inst==="guitar"&&sounding.length<5)score-=2;
+   if(score>bestScore){bestScore=score;best=arr.slice();}
+   return;
+  }
+  options.forEach(function(v){arr.push(v);walk(i+1,arr);arr.pop();});
+ }
+ walk(0,[]);
+ if(!best)return null;
+ GENERATED_SHAPES[key]=best;
+ var fingers=best.map(function(v){return v===null||v===0?0:0;});
+ var fretFinger={};var next=1;
+ best.forEach(function(v,i){
+  if(v===null||v===0)return;
+  if(!fretFinger[v])fretFinger[v]=next++;
+  fingers[i]=fretFinger[v];
+ });
+ GENERATED_FINGERS[key]=fingers;
+ return best;
+}
+function generatedFingers(name){
+ var key=state.settings.instrument+"|"+name;
+ if(!GENERATED_SHAPES[key])generatedChord(name);
+ return GENERATED_FINGERS[key]||null;
+}
 function shapeLookup(name){
  var inst=state.settings.instrument;
  var direct=SHAPES[inst]&&SHAPES[inst][name];
@@ -98,11 +153,12 @@ function shapeLookup(name){
   var found=SHAPES[inst]&&SHAPES[inst][candidates[j]+m[2]];
   if(found)return found;
  }
- return null;
+ return generatedChord(name);
 }
 function chordNames(s){var a=[];s.sections.forEach(function(sec){sec.lines.forEach(function(l){l.chords.forEach(function(x){if(a.indexOf(x.name)<0)a.push(x.name);});});});return a;}
 function fretDiagram(name){
  var inst=state.settings.instrument,f=shapeLookup(name),fi=FINGERS[inst]&&FINGERS[inst][name];
+ if(!fi)fi=generatedFingers(name);
  if(!fi){
   var m=String(name).match(/^([A-G](?:#|b)?)(.*)$/),i=m?pitchIndex(m[1]):-1;
   if(m&&i>=0){
