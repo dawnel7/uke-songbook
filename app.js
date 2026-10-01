@@ -95,13 +95,16 @@ function autoScrollStep(ts){
  if(!state.settings||state.settings.view!=="scroll"||state.settings.autoScroll<=0||state.session.view!=="song"||state.session.edit){stopAutoScroll();return;}
  if(!autoScrollLast)autoScrollLast=ts;
  var dt=Math.min(80,ts-autoScrollLast)/1000;autoScrollLast=ts;
- var speed=[0,5,10,24,40,60][state.settings.autoScroll]||0;
- var scroller=document.scrollingElement||document.documentElement;
- var max=Math.max(0,scroller.scrollHeight-window.innerHeight);
- if(max<=0||scroller.scrollTop>=max-1){stopAutoScroll();return;}
+ var speed=[0,4,8,18,36,60][state.settings.autoScroll]||0;
+ var max=Math.max(0,document.documentElement.scrollHeight-window.innerHeight);
+ var current=window.scrollY||document.documentElement.scrollTop||document.body.scrollTop||0;
+ if(max<=0||current>=max-1){stopAutoScroll();return;}
  autoScrollRemainder+=speed*dt;
- var pixels=Math.floor(autoScrollRemainder);
- if(pixels>0){scroller.scrollTop=Math.min(max,scroller.scrollTop+pixels);autoScrollRemainder-=pixels;}
+ if(autoScrollRemainder>0){
+  var next=Math.min(max,current+autoScrollRemainder);
+  window.scrollTo(0,next);
+  autoScrollRemainder-=next-current;
+ }
  autoScrollFrame=requestAnimationFrame(autoScrollStep);
 }
 function startAutoScroll(){
