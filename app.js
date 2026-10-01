@@ -1,7 +1,7 @@
 (function(){
 "use strict";
 var STORAGE="yourSongbookV2";
-var NOTES=["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+var NOTES=["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];\nvar DISPLAY_NOTES=["C","C#","D","Eb","E","F","F#","G","Ab","A","Bb","B"];\nfunction pitchIndex(root){\n var r=String(root||"").replace("Db","C#").replace("Eb","D#").replace("Gb","F#").replace("Ab","G#").replace("Bb","A#");\n return NOTES.indexOf(r);\n}
 var SHAPES={
  baritone:{"A":[2,2,2,0],"Am":[2,2,1,0],"Aaug":[3,2,1,1],"Adim":[1,2,1,0],"A6":[2,2,2,2],"Am6":[2,2,1,2],"A7":[0,2,2,3],"Amaj7":[2,2,2,3],"Am7":[2,2,1,3],"A9":[4,3,2,4],"Ab":[1,1,1,3],"Abm":[1,1,0,0],"Abaug":[2,1,1,0],"Abdim":[0,1,0,3],"Ab6":[1,1,1,1],"Abm6":[1,1,0,1],"Ab7":[1,1,1,0],"Abmaj7":[1,0,0,3],"Abm7":[1,1,0,2],"Ab9":[1,1,1,2],"B":[4,3,2,2],"Bm":[0,3,3,2],"Baug":[1,0,0,3],"Bdim":[0,3,0,1],"B6":[3,3,3,3],"Bm6":[0,1,0,2],"B7":[1,2,0,2],"Bmaj7":[1,3,0,2],"Bm7":[0,2,0,0],"B9":[1,0,0,2],"Bb":[3,3,3,1],"Bbm":[3,3,2,1],"Bbaug":[0,3,3,2],"Bbdim":[2,3,2,0],"Bb6":[3,3,3,3],"Bbm6":[3,3,2,3],"Bb7":[3,3,2,3],"Bbmaj7":[3,3,3,4],"Bbm7":[3,3,0,3],"Bb9":[0,3,1,3],"C":[2,0,1,0],"Cm":[1,0,1,3],"Caug":[2,0,0,0],"Cdim":[1,0,1,2],"C6":[2,2,1,3],"Cm6":[1,2,1,3],"C7":[2,3,1,3],"Cmaj7":[2,3,1,3],"Cm7":[1,3,1,2],"C9":[0,3,1,0],"D":[0,2,3,2],"Dm":[0,2,3,1],"Daug":[0,3,3,0],"Ddim":[0,1,3,1],"D6":[0,2,0,2],"Dm6":[0,2,0,1],"D7":[0,2,1,2],"Dmaj7":[0,0,0,2],"Dm7":[0,2,1,1],"D9":[0,4,4,2],"Db":[3,1,0,0],"Dbm":[2,1,2,0],"Dbaug":[3,0,0,1],"Dbdim":[2,0,2,0],"Db6":[3,3,2,3],"Dbm6":[0,3,2,3],"Db7":[2,3,2,3],"Dbmaj7":[3,4,2,3],"Dbm7":[2,3,2,3],"Db9":[1,3,2,1],"E":[2,1,0,0],"Em":[2,0,0,0],"Eaug":[2,1,1,3],"Edim":[2,3,4,3],"E6":[2,3,2,3],"Em6":[0,3,2,3],"E7":[0,1,0,0],"Emaj7":[1,1,0,0],"Em7":[0,0,0,0],"E9":[2,1,3,2],"Eb":[4,3,3,3],"Ebm":[3,3,3,2],"Ebaug":[1,0,0,3],"Ebdim":[1,2,0,3],"Eb6":[1,3,1,3],"Ebm6":[3,3,2,1],"Eb7":[1,2,2,3],"Ebmaj7":[1,2,2,2],"Ebm7":[1,3,2,2],"Eb9":[1,0,2,1],"F":[3,2,1,1],"Fm":[3,0,0,1],"Faug":[3,2,0,1],"Fdim":[3,1,0,1],"F6":[0,0,1,1],"Fm6":[0,1,1,1],"F7":[1,2,1,1],"Fmaj7":[3,2,1,0],"Fm7":[1,1,1,1],"F9":[3,2,3,3],"F#":[1,3,3,3],"F#m":[2,4,4,2],"F#aug":[2,2,2,3],"F#dim":[0,3,0,2],"F#6":[0,2,2,2],"F#m6":[2,3,3,3],"F#7":[1,2,1,3],"F#maj7":[0,0,0,2],"F#m7":[2,4,2,2],"F#9":[3,2,0,3],"G":[0,0,0,3],"Gm":[0,3,3,2],"Gaug":[1,0,2,2],"Gdim":[0,2,2,3],"G6":[2,3,2,2],"Gm6":[2,2,2,2],"G7":[2,3,2,2],"Gmaj7":[0,0,2,2],"Gm7":[2,2,2,2],"G9":[3,3,4,3],"Gb":[3,3,2,2],"Gbm":[0,0,2,2],"Gbaug":[4,3,3,2],"Gbdim":[4,2,1,2],"Gb6":[1,0,2,2],"Gbm6":[1,2,2,2],"Gb7":[2,3,2,2],"Gbmaj7":[3,2,2,1],"Gbm7":[2,2,2,2],"Gb9":[3,3,4,3]},
  soprano:{"C":[0,0,0,3],"Cm":[0,3,3,3],"C7":[0,0,0,1],"Cm7":[3,3,3,3],"C6":[0,0,0,0],"Cm6":[2,3,3,3],"Csus4":[0,0,1,3],"Cdim":[0,3,2,3],"D":[2,2,2,0],"Dm":[2,2,1,0],"D7":[2,2,2,3],"Dm7":[2,2,1,3],"D6":[2,2,2,2],"Dm6":[2,3,4,4],"Dsus4":[0,1,0,2],"Ddim":[1,3,2,0],"E":[1,4,0,2],"Em":[0,4,3,2],"E7":[1,2,0,1],"Em7":[0,1,0,2],"E6":[1,1,0,3],"Em6":[1,0,0,2],"Esus4":[2,4,0,2],"Edim":[0,4,0,1],"F":[2,0,1,0],"Fm":[1,0,1,3],"F7":[2,3,1,3],"Fm7":[1,3,1,3],"F6":[2,2,1,4],"Fm6":[1,3,1,4],"Fsus4":[3,0,1,1],"Fdim":[2,4,3,1],"G":[0,2,3,2],"Gm":[0,2,3,1],"G7":[0,2,1,2],"Gm7":[0,2,1,1],"G6":[0,2,0,2],"Gm6":[0,2,0,1],"Gsus4":[0,0,1,3],"Gdim":[0,1,3,1],"A":[1,1,0,0],"Am":[2,0,0,0],"A7":[0,1,0,0],"Am7":[0,0,0,0],"A6":[1,1,3,4],"Am6":[1,1,4,3],"Asus4":[1,1,0,0],"Adim":[3,1,4,0],"B":[4,3,1,1],"Bm":[4,1,1,1],"B7":[1,3,1,1],"Bm7":[1,1,1,1],"B6":[1,3,2,1],"Bm6":[1,2,2,2],"Bsus4":[3,4,1,1],"Bdim":[4,2,1,2],"F#m":[2,1,2,0],"F#m7":[2,1,2,2]},
@@ -73,13 +73,39 @@ function save(){try{localStorage.setItem(STORAGE,JSON.stringify(state));}catch(e
 function currentSong(){return state.session.edit?state.session.draft:state.songs[state.session.songId];}
 function transpose(chord,shift){
  var m=String(chord).match(/^([A-G](?:#|b)?)(.*)$/);if(!m)return chord;
- var root=m[1].replace("Db","C#").replace("Eb","D#").replace("Gb","F#").replace("Ab","G#").replace("Bb","A#");
- var i=NOTES.indexOf(root);if(i<0)return chord;
- return NOTES[(i+shift+120)%12]+m[2];
+ var i=pitchIndex(m[1]);if(i<0)return chord;
+ return DISPLAY_NOTES[(i+shift+120)%12]+m[2];
+}
+function shapeLookup(name){
+ var inst=state.settings.instrument;
+ var direct=SHAPES[inst]&&SHAPES[inst][name];
+ if(direct)return direct;
+ var m=String(name).match(/^([A-G](?:#|b)?)(.*)$/);
+ if(!m)return null;
+ var i=pitchIndex(m[1]);if(i<0)return null;
+ var candidates=[NOTES[i]];
+ var enh=DISPLAY_NOTES[i];
+ if(candidates.indexOf(enh)<0)candidates.push(enh);
+ var aliases={"C#":["Db"],"D#":["Eb"],"F#":["Gb"],"G#":["Ab"],"A#":["Bb"]};
+ (aliases[NOTES[i]]||[]).forEach(function(x){if(candidates.indexOf(x)<0)candidates.push(x);});
+ for(var j=0;j<candidates.length;j++){
+  var found=SHAPES[inst]&&SHAPES[inst][candidates[j]+m[2]];
+  if(found)return found;
+ }
+ return null;
 }
 function chordNames(s){var a=[];s.sections.forEach(function(sec){sec.lines.forEach(function(l){l.chords.forEach(function(x){if(a.indexOf(x.name)<0)a.push(x.name);});});});return a;}
 function fretDiagram(name){
- var inst=state.settings.instrument,f=SHAPES[inst]&&SHAPES[inst][name],fi=FINGERS[inst]&&FINGERS[inst][name];
+ var inst=state.settings.instrument,f=shapeLookup(name),fi=FINGERS[inst]&&FINGERS[inst][name];
+ if(!fi){
+  var m=String(name).match(/^([A-G](?:#|b)?)(.*)$/),i=m?pitchIndex(m[1]):-1;
+  if(m&&i>=0){
+   var aliases=[NOTES[i],DISPLAY_NOTES[i]];
+   var extra={"C#":"Db","D#":"Eb","F#":"Gb","G#":"Ab","A#":"Bb"}[NOTES[i]];
+   if(extra)aliases.push(extra);
+   for(var ai=0;ai<aliases.length&&!fi;ai++)fi=FINGERS[inst]&&FINGERS[inst][aliases[ai]+m[2]];
+  }
+ }
  if(!f)return '<div class="fretMissing">No diagram yet</div>';
  var strings=f.length,frets=4,w=58+strings*11,h=82,ox=25,top=22,bottom=70,step=(bottom-top)/frets;
  var svg='<svg class="fretSvg" viewBox="0 0 '+w+' '+h+'" aria-label="'+esc(name)+' chord diagram">';
@@ -136,7 +162,8 @@ function renderSong(){
  document.getElementById("instrument").value=state.settings.instrument;
  document.getElementById("viewMode").value=state.settings.view;
  document.getElementById("pinToggle").textContent=state.settings.pin?"📌 Chord bar on":"📌 Chord bar off";
- var key=document.getElementById("key");key.innerHTML=NOTES.map(function(n){return '<option value="'+n+'">'+n+"</option>";}).join("");key.value=transpose(s.key,state.settings.shift);
+ var key=document.getElementById("key");key.innerHTML=DISPLAY_NOTES.map(function(n){return '<option value="'+n+'">'+n+"</option>";}).join("");key.value=transpose(s.key,state.settings.shift);
+ var transposeKey=document.getElementById("transposeKeyLabel");if(transposeKey)transposeKey.textContent=transpose(s.key,state.settings.shift);
  var actions=document.querySelector(".titleActions");
  if(state.session.edit){
   actions.innerHTML='<button id="saveLibrary" class="primary">Save to Library</button><button id="cancelEdit" class="btn">Cancel</button>'+(state.session.draftNew?'':'<button id="restoreOriginal" class="btn">↩ Return to Original</button>')+'<button id="songMenu" class="btn">⋯</button>';
@@ -537,7 +564,7 @@ document.getElementById("viewMode").onchange=function(e){state.settings.view=e.t
 document.getElementById("pinToggle").onclick=function(){state.settings.pin=!state.settings.pin;save();renderSong();};
 document.getElementById("up").onclick=function(){state.settings.shift++;save();renderSong();};
 document.getElementById("down").onclick=function(){state.settings.shift--;save();renderSong();};
-document.getElementById("key").onchange=function(e){state.settings.shift=NOTES.indexOf(e.target.value)-NOTES.indexOf(currentSong().key);save();renderSong();};
+document.getElementById("key").onchange=function(e){state.settings.shift=pitchIndex(e.target.value)-pitchIndex(currentSong().key);save();renderSong();};
 document.getElementById("newSong").onclick=openNewSong;
 document.getElementById("newSet").onclick=function(){var id=uid("set");state.sets[id]={id:id,name:"New Set",songIds:[]};openSet(id);};
 document.getElementById("setDone").onclick=function(){state.session.view="sets";save();render();};
