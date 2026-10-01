@@ -85,21 +85,28 @@ if(!state.sets)state.sets={};
 if(state.pendingFile===undefined)state.pendingFile=null;
 var autoScrollFrame=null;
 var autoScrollLast=0;
+var autoScrollRemainder=0;
 function stopAutoScroll(){
  if(autoScrollFrame){cancelAnimationFrame(autoScrollFrame);autoScrollFrame=null;}
  autoScrollLast=0;
+ autoScrollRemainder=0;
 }
 function autoScrollStep(ts){
  if(!state.settings||state.settings.view!=="scroll"||state.settings.autoScroll<=0||state.session.view!=="song"||state.session.edit){stopAutoScroll();return;}
  if(!autoScrollLast)autoScrollLast=ts;
  var dt=Math.min(50,ts-autoScrollLast)/1000;
  autoScrollLast=ts;
- var speed=[0,2,4,7,11,16][state.settings.autoScroll]||0;
+ var speed=[0,3,6,10,15,22][state.settings.autoScroll]||0;
  var scroller=document.scrollingElement||document.documentElement;
  var max=Math.max(0,scroller.scrollHeight-window.innerHeight);
  var current=scroller.scrollTop;
- if(max<=0||current>=max-0.5){stopAutoScroll();return;}
- scroller.scrollTop=Math.min(max,current+speed*dt);
+ if(max<=0||current>=max-1){stopAutoScroll();return;}
+ autoScrollRemainder+=speed*dt;
+ var move=Math.floor(autoScrollRemainder);
+ if(move>0){
+  autoScrollRemainder-=move;
+  scroller.scrollTop=Math.min(max,current+move);
+ }
  autoScrollFrame=requestAnimationFrame(autoScrollStep);
 }
 function startAutoScroll(){
