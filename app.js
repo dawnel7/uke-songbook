@@ -115,8 +115,8 @@ function startAutoScroll(){
 }
 function syncAutoScrollControl(){
  var val=Number(state.settings.autoScroll)||0;
- var toolbar=document.getElementById("scrollToolbar");
- if(toolbar)toolbar.classList.toggle("isSticky",state.settings.view==="scroll"&&!state.session.edit);
+ var controls=document.querySelector(".controls");
+ if(controls)controls.classList.toggle("isSticky",state.settings.view==="scroll"&&!state.session.edit);
  document.querySelectorAll(".autoScrollChoice").forEach(function(b){
   b.classList.toggle("active",Number(b.getAttribute("data-speed"))===val);
   b.disabled=state.settings.view!=="scroll"||state.session.edit;
