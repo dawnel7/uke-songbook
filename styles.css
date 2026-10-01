@@ -223,17 +223,17 @@ body.chordDragging{user-select:none}
 
 
 /* Compact auto-scroll control in the sticky header */
-.headerAutoScroll{display:flex;align-items:center;gap:6px;margin-left:clamp(24px,6vw,80px)}
-.headerAutoScroll>span{font-size:10px;font-weight:800;opacity:.9;white-space:nowrap}
-.headerAutoChoices{display:flex;gap:3px}
-.headerAutoChoice{width:23px;height:23px;padding:0;border:1px solid #ffffff66;border-radius:5px;background:#ffffff18;color:white;font-size:11px;font-weight:800;cursor:pointer}
+.headerAutoScroll{display:flex;align-items:center;gap:7px;margin-left:clamp(24px,5vw,64px)}
+.headerAutoScroll>span{font-size:12px;font-weight:800;opacity:.9;white-space:nowrap}
+.headerAutoChoices{display:flex;gap:4px}
+.headerAutoChoice{width:28px;height:28px;padding:0;border:1px solid #ffffff66;border-radius:6px;background:#ffffff18;color:white;font-size:12px;font-weight:800;cursor:pointer}
 .headerAutoChoice.active{background:white;color:var(--green);border-color:white}
 .headerAutoChoice:disabled{opacity:.45;cursor:default}
 .headerAutoScroll.hidden{display:none!important}
 @media(max-width:750px){
- .headerAutoScroll{gap:4px;margin-left:auto}
- .headerAutoScroll>span{font-size:9px}
- .headerAutoChoice{width:20px;height:21px;font-size:10px}
+ .headerAutoScroll{gap:5px;margin-left:auto}
+ .headerAutoScroll>span{font-size:10px}
+ .headerAutoChoice{width:24px;height:24px;font-size:11px}
 }
 
 
@@ -241,7 +241,7 @@ body.chordDragging{user-select:none}
 header .headerChordBar{
   display:flex;
   align-items:center;
-  gap:7px;
+  gap:9px;
   flex:0 1 auto;
   min-width:0;
   max-width:38vw;
@@ -250,27 +250,27 @@ header .headerChordBar{
 header .headerChordBar.hidden{display:none!important}
 .headerChordItem{
   flex:0 0 auto;
-  width:36px;
-  min-width:36px;
+  width:43px;
+  min-width:43px;
   text-align:center;
   color:white;
   line-height:1;
 }
 .headerChordName{
-  font-size:10px;
+  font-size:12px;
   font-weight:850;
   white-space:nowrap;
-  margin-bottom:1px;
+  margin-bottom:2px;
 }
 .headerChordDiagram{
-  width:32px;
-  height:27px;
+  width:38px;
+  height:32px;
   margin:0 auto;
   overflow:hidden;
 }
 .headerChordDiagram .fretSvg{
-  width:32px;
-  height:27px;
+  width:38px;
+  height:32px;
   display:block;
   margin:0 auto;
 }
@@ -279,19 +279,20 @@ header .headerChordBar.hidden{display:none!important}
 .headerChordDiagram .nutLine{stroke:white}
 .headerChordDiagram .openDot{fill:var(--green);stroke:white}
 .headerChordDiagram .fingerDot{fill:white;stroke:white}
-.headerChordDiagram .fingerNum{fill:var(--green);font-size:6px}
-.headerChordDiagram .muteMark{fill:white;font-size:11px}
+.headerChordDiagram .fingerNum{fill:var(--green);font-size:7px}
+.headerChordDiagram .muteMark{fill:white;font-size:12px}
 
 @media(max-width:900px){
-  header .headerChordBar{max-width:32vw;gap:4px}
-  .headerChordItem{width:33px;min-width:33px}
-  .headerChordDiagram,.headerChordDiagram .fretSvg{width:29px;height:25px}
-  .headerChordName{font-size:9px}
+  header .headerChordBar{max-width:32vw;gap:6px}
+  .headerChordItem{width:38px;min-width:38px}
+  .headerChordDiagram,.headerChordDiagram .fretSvg{width:34px;height:29px}
+  .headerChordName{font-size:11px}
 }
 @media(max-width:750px){
-  header .headerChordBar{max-width:34vw}
-  .headerChordItem{width:31px;min-width:31px}
-  .headerChordDiagram,.headerChordDiagram .fretSvg{width:27px;height:24px}
+  header .headerChordBar{max-width:34vw;gap:4px}
+  .headerChordItem{width:34px;min-width:34px}
+  .headerChordDiagram,.headerChordDiagram .fretSvg{width:30px;height:26px}
+  .headerChordName{font-size:10px}
 }
 
 /* Song title replaces the header brand only while viewing a song. */
