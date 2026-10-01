@@ -377,6 +377,7 @@ function renderFreeEditor(el,s){
  el.innerHTML=h;
  bindWordDocument();
  renderSubstitutions(s);
+ bindEditActions();
  var undoBtn=document.getElementById("undoEditBtn");
  if(undoBtn)undoBtn.onclick=function(e){
   e.preventDefault();
