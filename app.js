@@ -327,7 +327,7 @@ function renderChords(s){
  el.style.position="static";
  el.style.top="";
 }
-function displayLine(l){
+function displayLine(l,s){
  var text=l.text||"", chords=(l.chords||[]).slice().sort(function(a,b){return (Number(a.pos)||0)-(Number(b.pos)||0);});
  var h='<div class="songLine"><div class="lineWords'+(!text&&chords.length?' chordOnlyLine':'')+'">';
  if(!text){
@@ -362,7 +362,7 @@ function displayLine(l){
 }
 function renderLyrics(s){
  var el=document.getElementById("lyrics");el.className="card lyrics"+(state.settings.view==="page"?" page":"");
- if(state.session.edit){renderFreeEditor(el,s);}else{var out="";s.sections.forEach(function(sec){out+='<section class="section"><h3>'+esc(sec.name)+"</h3>";sec.lines.forEach(function(l){out+=displayLine(l);});out+="</section>";});el.innerHTML=out;}
+ if(state.session.edit){renderFreeEditor(el,s);}else{var out="";s.sections.forEach(function(sec){out+='<section class="section"><h3>'+esc(sec.name)+"</h3>";sec.lines.forEach(function(l){out+=displayLine(l,s);});out+="</section>";});el.innerHTML=out;}
 }
 function renderFreeEditor(el,s){
  var h='<div class="wordEditToolbar"><span>Edit the song directly. Chords are editable text too. Select, copy, cut, paste, press Return, or drag a chord.</span><div class="wordEditActions"><button id="undoEditBtn" class="btn" disabled>↶ Undo</button><button id="saveLibrary" class="primary">Save Changes</button><button id="saveCopy" class="btn">Save a Copy</button><button id="cancelEdit" class="btn">Cancel</button><button id="songMenu" class="btn">⋯</button></div></div>';
