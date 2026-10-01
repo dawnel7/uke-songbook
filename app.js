@@ -71,7 +71,8 @@ function fresh(){return {songs:{hallelujah:makeSong()},sets:{},settings:{instrum
 var state;
 try{state=JSON.parse(localStorage.getItem(STORAGE));}catch(e){state=null;}
 if(!state||!state.songs)state=fresh();
-if(!state.session)state=fresh();\nif(!state.settings)state=fresh().settings;\nif(state.settings.autoScroll==null)state.settings.autoScroll=0;
+if(!state.session)state=fresh();
+if(!state.settings)state=fresh().settings;\nif(state.settings.autoScroll==null)state.settings.autoScroll=0;
 if(!state.songs||Object.keys(state.songs).length===0){state.songs={hallelujah:makeSong()};}
 if(!state.songs.hallelujah){state.songs.hallelujah=makeSong();}
 Object.keys(state.songs).forEach(function(id){var s=state.songs[id];if(s&&s.title==="New Song"&&s.artist==="Unknown"&&s.source&&s.source.type==="Manual")delete state.songs[id];});
@@ -245,13 +246,15 @@ function openNewSong(){
  var d={id:null,title:"New Song",artist:"",key:"C",genre:"",moods:[],duration:180,source:{type:"Manual"},sections:[{name:"Verse",lines:[line("Add your lyrics here", [c("C",0)])]}]};
  state.session.songId=null;state.session.view="song";state.session.edit=true;state.session.draft=d;state.session.draftNew=true;render();
 }
-function renderSong(){\n stopAutoScroll();
+function renderSong(){
+ stopAutoScroll();
  var s=currentSong();if(!s){state.session.view="library";return render();}
  document.getElementById("songTitle").textContent=s.title||"Untitled Song";
  document.getElementById("songMeta").textContent=s.artist||"New song";
  document.getElementById("songDetails").textContent="Key of "+transpose(s.key,state.settings.shift)+" · "+(s.genre||"Genre not set")+" · "+(s.moods||[]).join(" · ")+(s.duration?" · "+Math.round(s.duration/60)+" min":"");
  document.getElementById("instrument").value=state.settings.instrument;
- document.getElementById("viewMode").value=state.settings.view;\n syncAutoScrollControl();
+ document.getElementById("viewMode").value=state.settings.view;
+ syncAutoScrollControl();
  document.getElementById("pinToggle").textContent=state.settings.pin?"📌 Chord bar on":"📌 Chord bar off";
  var key=document.getElementById("key");key.innerHTML=DISPLAY_NOTES.map(function(n){return '<option value="'+n+'">'+n+"</option>";}).join("");key.value=transpose(s.key,state.settings.shift);
  var transposeKey=document.getElementById("transposeKeyLabel");if(transposeKey)transposeKey.textContent=transpose(s.key,state.settings.shift);
