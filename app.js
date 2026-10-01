@@ -76,6 +76,7 @@ if(!state.settings)state=fresh().settings;
 if(state.settings.autoScroll==null)state.settings.autoScroll=0;
 if(!state.songs||Object.keys(state.songs).length===0){state.songs={hallelujah:makeSong()};}
 if(!state.songs.hallelujah){state.songs.hallelujah=makeSong();}
+Object.keys(state.songs).forEach(function(id){if(!state.songs[id].substitutions)state.songs[id].substitutions={};});
 Object.keys(state.songs).forEach(function(id){var s=state.songs[id];if(s&&s.title==="New Song"&&s.artist==="Unknown"&&s.source&&s.source.type==="Manual")delete state.songs[id];});
 function save(){
  try{localStorage.setItem(STORAGE,JSON.stringify(state));}
@@ -204,6 +205,8 @@ function shapeLookup(name){
  return generatedChord(name);
 }
 function chordNames(s){var a=[];s.sections.forEach(function(sec){sec.lines.forEach(function(l){l.chords.forEach(function(x){if(a.indexOf(x.name)<0)a.push(x.name);});});});return a;}
+function effectiveChordName(name,s){var map=s&&s.substitutions||{};var v=map[name];return v&&String(v).trim()?String(v).trim():name;}
+function effectiveChordNames(s){var a=[];chordNames(s).forEach(function(n){var x=effectiveChordName(n,s);if(a.indexOf(x)<0)a.push(x);});return a;}
 function fretDiagram(name){
  var inst=state.settings.instrument,f=shapeLookup(name),fi=FINGERS[inst]&&FINGERS[inst][name];
  if(!fi)fi=generatedFingers(name);
@@ -305,9 +308,9 @@ function renderSong(){
 function renderChords(s){
  var el=document.getElementById("chords");
  var header=document.getElementById("headerChordBar");
- var names=chordNames(s);
+ var names=effectiveChordNames(s);
  var items=names.map(function(n){
-  var x=transpose(n,state.settings.shift);
+  var x=transpose(effectiveChordName(n,s),state.settings.shift);
   return '<div class="chordbox"><div class="chordname">'+esc(x)+'</div><div class="diagram">'+fretDiagram(x)+'</div></div>';
  }).join("");
 
@@ -363,7 +366,8 @@ function renderLyrics(s){
  if(state.session.edit){renderFreeEditor(el,s);}else{var out="";s.sections.forEach(function(sec){out+='<section class="section"><h3>'+esc(sec.name)+"</h3>";sec.lines.forEach(function(l){out+=displayLine(l);});out+="</section>";});el.innerHTML=out;}
 }
 function renderFreeEditor(el,s){
- var h='<div class="wordEditToolbar"><span>Edit the song directly. Chords are editable text too. Select, copy, cut, paste, press Return, or drag a chord.</span><div class="wordEditActions"><button id="undoEditBtn" class="btn" disabled>↶ Undo</button></div></div>';
+ var h='<div class="wordEditToolbar"><span>Edit the song directly. Chords are editable text too. Select, copy, cut, paste, press Return, or drag a chord.</span><div class="wordEditActions"><button id="undoEditBtn" class="btn" disabled>↶ Undo</button><button id="saveLibrary" class="primary">Save Changes</button><button id="saveCopy" class="btn">Save a Copy</button><button id="cancelEdit" class="btn">Cancel</button><button id="songMenu" class="btn">⋯</button></div></div>';
+ h+='<div class="chordSubPanel"><div class="editSubTitle">Chord substitutions</div><div class="muted">Change a chord throughout this song only. Example: F#m → F#m7.</div><div class="chordSubRow"><input id="subFrom" class="chordSubInput" placeholder="Original chord (e.g. F#m)"><span>→</span><input id="subTo" class="chordSubInput" placeholder="Replacement (e.g. F#m7)"><button id="applySubstitution" class="btn">Apply</button></div><div id="substitutionList" class="substitutionList"></div></div>';
  h+='<div class="songDocument" contenteditable="true" spellcheck="true">';
  s.sections.forEach(function(sec,si){
   h+='<div class="docSection" data-si="'+si+'"><div class="docSectionHeading" data-heading="1">'+esc(sec.name)+'</div>';
@@ -373,6 +377,7 @@ function renderFreeEditor(el,s){
  h+='</div>';
  el.innerHTML=h;
  bindWordDocument();
+ renderSubstitutions(s);
  var undoBtn=document.getElementById("undoEditBtn");
  if(undoBtn)undoBtn.onclick=function(e){
   e.preventDefault();
@@ -714,15 +719,28 @@ function syncWordDocument(doc){
 }
 function beginEdit(){
  window.__songUndo=[];
- var id=state.session.songId;state.session.edit=true;state.session.draft=clone(state.songs[id]);state.session.draftNew=false;render();
+ var id=state.session.songId;state.session.edit=true;state.session.draft=clone(state.songs[id]);if(!state.session.draft.substitutions)state.session.draft.substitutions={};state.session.draftNew=false;render();
+}
+function renderSubstitutions(s){
+ var list=document.getElementById("substitutionList");if(!list)return;
+ var keys=Object.keys(s.substitutions||{});
+ list.innerHTML=keys.length?keys.map(function(k){return '<div class="substitutionItem"><span>'+esc(k)+' → '+esc(s.substitutions[k])+'</span><button class="btn" data-remove-sub="'+esc(k)+'">Remove</button></div>';}).join(""):'<span class="muted">No song-specific substitutions yet.</span>';
+ list.querySelectorAll("[data-remove-sub]").forEach(function(b){b.onclick=function(){var k=b.getAttribute("data-remove-sub"),before=JSON.stringify(s.sections);delete s.substitutions[k];pushSongUndo(document.querySelector(".songDocument"),before,JSON.stringify(s.sections));renderSong();};});
+ var apply=document.getElementById("applySubstitution");
+ if(apply)apply.onclick=function(){var from=(document.getElementById("subFrom").value||"").trim(),to=(document.getElementById("subTo").value||"").trim();if(!from||!to||from===to)return;var before=JSON.stringify(s.sections);s.sections.forEach(function(sec){sec.lines.forEach(function(l){l.chords.forEach(function(ch){if(ch.name===from)ch.name=to;});});});s.substitutions[from]=to;pushSongUndo(document.querySelector(".songDocument"),before,JSON.stringify(s.sections));document.getElementById("subFrom").value="";document.getElementById("subTo").value="";renderSong();};
 }
 function saveLibrary(){
- var d=state.session.draft;
- if(!d)return;
+ var d=state.session.draft;if(!d)return;
  if(!d.title.trim()){alert("Please give the song a title before saving.");return;}
- if(state.session.draftNew){d.id=uid("song");state.songs[d.id]=clone(d);state.session.songId=d.id;state.session.draftNew=false;}
- else{state.songs[d.id]=clone(d);}
+ if(!d.substitutions)d.substitutions={};
+ if(state.session.draftNew){d.id=uid("song");state.songs[d.id]=clone(d);state.session.songId=d.id;state.session.draftNew=false;}else{state.songs[d.id]=clone(d);}
  state.session.draft=null;state.session.edit=false;window.__songUndo=[];save();render();
+}
+function saveCopy(){
+ var d=state.session.draft;if(!d)return;
+ if(!d.title.trim()){alert("Please give the song a title before saving.");return;}
+ var copy=clone(d);copy.id=uid("song");copy.title=(copy.title||"Untitled Song")+" (Copy)";if(!copy.substitutions)copy.substitutions={};
+ state.songs[copy.id]=copy;state.session.songId=copy.id;state.session.draft=null;state.session.edit=false;state.session.draftNew=false;window.__songUndo=[];save();render();
 }
 function cancelEdit(){
  if(state.session.draftNew){state.session.draft=null;state.session.edit=false;window.__songUndo=[];state.session.songId=null;state.session.view="library";render();return;}
@@ -742,9 +760,10 @@ function deleteSongMenu(){
  if(confirm("Delete \""+s.title+"\" from your library? This cannot be undone.")){delete state.songs[s.id];Object.values(state.sets).forEach(function(set){set.songIds=set.songIds.filter(function(id){return id!==s.id;});});state.session.songId=null;state.session.view="library";save();render();}
 }
 function bindEditActions(){
- document.getElementById("saveLibrary").onclick=saveLibrary;
- document.getElementById("cancelEdit").onclick=cancelEdit;
- document.getElementById("songMenu").onclick=deleteSongMenu;
+ var a=document.getElementById("saveLibrary");if(a)a.onclick=saveLibrary;
+ var c=document.getElementById("saveCopy");if(c)c.onclick=saveCopy;
+ var x=document.getElementById("cancelEdit");if(x)x.onclick=cancelEdit;
+ var m=document.getElementById("songMenu");if(m)m.onclick=deleteSongMenu;
  var r=document.getElementById("restoreOriginal");if(r)r.onclick=restoreOriginal;
 }
 function renderSets(){
