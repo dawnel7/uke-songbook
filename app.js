@@ -77,6 +77,12 @@ if(state.settings.autoScroll==null)state.settings.autoScroll=0;
 if(!state.songs||Object.keys(state.songs).length===0){state.songs={hallelujah:makeSong()};}
 if(!state.songs.hallelujah){state.songs.hallelujah=makeSong();}
 Object.keys(state.songs).forEach(function(id){var s=state.songs[id];if(s&&s.title==="New Song"&&s.artist==="Unknown"&&s.source&&s.source.type==="Manual")delete state.songs[id];});
+function save(){
+ try{localStorage.setItem(STORAGE,JSON.stringify(state));}
+ catch(e){console.warn("Songbook save failed",e);}
+}
+if(!state.sets)state.sets={};
+if(state.pendingFile===undefined)state.pendingFile=null;
 var autoScrollFrame=null;
 var autoScrollLast=0;
 function stopAutoScroll(){
