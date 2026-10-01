@@ -194,3 +194,12 @@ body.chordDragging{user-select:none}
 .autoScrollChoice.active{background:var(--green);border-color:var(--green);color:white}
 .autoScrollChoice:disabled{opacity:.4;cursor:default}
 .autoScrollScale{display:flex;justify-content:space-between;color:var(--muted);font-size:9px;margin-top:3px}
+
+/* Compact scroll toolbar: visually lives under the selectors and stays available during scrolling */
+.scrollToolbar{display:grid;grid-template-columns:2fr 1fr;gap:14px;align-items:end;background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:10px 14px;margin-top:-1px;margin-bottom:18px;box-shadow:0 1px 3px #00000008}
+.scrollToolbar.isSticky{position:sticky;top:64px;z-index:15}
+.scrollToolbar .transposeRow{margin:0;align-items:center}
+.scrollToolbar .autoScrollControl{margin:0;padding:0;border:0}
+.scrollToolbar .autoScrollChoices{display:flex;gap:4px;width:100%}
+.scrollToolbar .autoScrollChoice{height:30px}
+@media(max-width:750px){.scrollToolbar{grid-template-columns:1fr;gap:8px}.scrollToolbar .transposeRow{flex-wrap:wrap}.scrollToolbar .transposeRow .transposeKey{order:0;flex:1}.scrollToolbar .transposeRow #pinToggle{flex-basis:auto}.scrollToolbar.isSticky{top:58px}.scrollToolbar .autoScrollScale{display:flex}}
