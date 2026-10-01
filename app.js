@@ -103,8 +103,6 @@ function startAutoScroll(){
 }
 function syncAutoScrollControl(){
  var val=Number(state.settings.autoScroll)||0;
- var controls=document.querySelector(".controls");
- if(controls)controls.classList.toggle("isSticky",state.settings.view==="scroll"&&!state.session.edit);
  document.querySelectorAll(".autoScrollChoice,.headerAutoChoice").forEach(function(b){
   b.classList.toggle("active",Number(b.getAttribute("data-speed"))===val);
   b.disabled=state.settings.view!=="scroll"||state.session.edit;
@@ -281,10 +279,8 @@ function renderChords(s){
  el.style.position=state.settings.pin?"sticky":"static";
  if(state.settings.pin&&state.settings.view==="scroll"){
   var header=document.querySelector("header");
-  var controls=document.querySelector(".controls");
   var headerH=header?header.getBoundingClientRect().height:64;
-  var controlsH=controls?controls.getBoundingClientRect().height:0;
-  el.style.top=Math.ceil(headerH+controlsH+2)+"px";
+  el.style.top=Math.ceil(headerH+2)+"px";
  }else{
   el.style.top=state.settings.view==="scroll"?"64px":"64px";
  }
