@@ -476,6 +476,7 @@ function currentLineFromSelection(doc){
  return n.nodeType===1?n.closest&&n.closest(".docLine"):n.parentElement&&n.parentElement.closest(".docLine");
 }
 function splitDocLine(doc){
+ var before=JSON.stringify(currentSong().sections);
  var sel=window.getSelection();if(!sel||!sel.rangeCount)return;
  var r=sel.getRangeAt(0);
  var line=currentLineFromSelection(doc);if(!line)return;
@@ -488,6 +489,7 @@ function splitDocLine(doc){
  line.parentNode.insertBefore(newLine,line.nextSibling);
  placeCaretAtStart(newLine);
  syncWordDocument(doc);
+ pushSongUndo(doc,before,JSON.stringify(currentSong().sections));
 }
 function placeCaretAtStart(el){
  var node=el.firstChild;
@@ -527,6 +529,22 @@ function bindWordDocument(){
  var doc=document.querySelector(".songDocument");
  if(!doc)return;
  bindPastedChords(doc);
+
+ // Native contenteditable changes (typing, deleting, paste, cut, line
+ // changes, heading edits, etc.) each become one undo action.
+ doc.addEventListener("beforeinput",function(){
+  if(window.__restoringUndo)return;
+  window.__editorInputBefore=JSON.stringify(currentSong().sections);
+ });
+ doc.addEventListener("input",function(){
+  if(window.__restoringUndo)return;
+  var before=window.__editorInputBefore||JSON.stringify(currentSong().sections);
+  window.__editorInputBefore=null;
+  syncWordDocument(doc);
+  var after=JSON.stringify(currentSong().sections);
+  pushSongUndo(doc,before,after);
+ });
+
  var undoBtn=document.getElementById("undoEditBtn");
  if(undoBtn)undoBtn.onclick=function(e){
   e.preventDefault();
@@ -571,10 +589,12 @@ function bindDocChord(chip,doc){
     if(e.key==="Backspace"){if(start===0)return;start--;}
     else{if(start>=chip.textContent.length)return;end++;}
    }
+   var before=JSON.stringify(currentSong().sections);
    var value=chip.textContent;
    chip.textContent=value.slice(0,start)+value.slice(end);
    placeCaretAtOffset(chip,start);
    syncWordDocument(doc);
+   pushSongUndo(doc,before,JSON.stringify(currentSong().sections));
    return;
   }
 
@@ -584,10 +604,12 @@ function bindDocChord(chip,doc){
    e.preventDefault();e.stopPropagation();
    var pos=r.collapsed?(r.startContainer.nodeType===3?r.startOffset:0):0;
    var del=r.collapsed?0:r.toString().length;
+   var before=JSON.stringify(currentSong().sections);
    var value=chip.textContent;
    chip.textContent=value.slice(0,pos)+e.key+value.slice(pos+del);
    placeCaretAtOffset(chip,pos+e.key.length);
    syncWordDocument(doc);
+   pushSongUndo(doc,before,JSON.stringify(currentSong().sections));
   }
  });
 }
@@ -601,6 +623,7 @@ function placeCaretAtOffset(el,offset){
  var sel=window.getSelection();sel.removeAllRanges();sel.addRange(r);el.focus();
 }
 function insertChordAtCaret(doc){
+ var before=JSON.stringify(currentSong().sections);
  var sel=window.getSelection(),range;
  if(sel&&sel.rangeCount&&doc.contains(sel.getRangeAt(0).startContainer))range=sel.getRangeAt(0).cloneRange();
  else{
@@ -612,6 +635,7 @@ function insertChordAtCaret(doc){
  insertNodeAtRange(range,chord);bindDocChord(chord,doc);
  var rr=document.createRange();rr.selectNodeContents(chord);var s=window.getSelection();s.removeAllRanges();s.addRange(rr);doc.focus();
  syncWordDocument(doc);
+ pushSongUndo(doc,before,JSON.stringify(currentSong().sections));
 }
 function sanitizePastedDoc(doc){
  doc.querySelectorAll(".docLine").forEach(function(line){
