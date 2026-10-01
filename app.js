@@ -83,22 +83,29 @@ function save(){
 }
 if(!state.sets)state.sets={};
 if(state.pendingFile===undefined)state.pendingFile=null;
-var autoScrollTimer=null;
+var autoScrollFrame=null;
+var autoScrollLast=0;
 function stopAutoScroll(){
- if(autoScrollTimer){clearInterval(autoScrollTimer);autoScrollTimer=null;}
+ if(autoScrollFrame){cancelAnimationFrame(autoScrollFrame);autoScrollFrame=null;}
+ autoScrollLast=0;
 }
-function autoScrollTick(){
+function autoScrollStep(ts){
  if(!state.settings||state.settings.view!=="scroll"||state.settings.autoScroll<=0||state.session.view!=="song"||state.session.edit){stopAutoScroll();return;}
- var max=Math.max(0,document.documentElement.scrollHeight-window.innerHeight);
- var current=Math.round(window.scrollY||document.documentElement.scrollTop||document.body.scrollTop||0);
- if(max<=0||current>=max-1){stopAutoScroll();return;}
- var step=[0,1,2,3,4,5][state.settings.autoScroll]||0;
- window.scrollBy(0,step);
+ if(!autoScrollLast)autoScrollLast=ts;
+ var dt=Math.min(50,ts-autoScrollLast)/1000;
+ autoScrollLast=ts;
+ var speed=[0,2,4,7,11,16][state.settings.autoScroll]||0;
+ var scroller=document.scrollingElement||document.documentElement;
+ var max=Math.max(0,scroller.scrollHeight-window.innerHeight);
+ var current=scroller.scrollTop;
+ if(max<=0||current>=max-0.5){stopAutoScroll();return;}
+ scroller.scrollTop=Math.min(max,current+speed*dt);
+ autoScrollFrame=requestAnimationFrame(autoScrollStep);
 }
 function startAutoScroll(){
  stopAutoScroll();
  if(state.settings.view==="scroll"&&state.settings.autoScroll>0&&!state.session.edit){
-  autoScrollTimer=setInterval(autoScrollTick,100);
+  autoScrollFrame=requestAnimationFrame(autoScrollStep);
  }
 }
 function syncAutoScrollControl(){
