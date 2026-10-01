@@ -220,3 +220,18 @@ body.chordDragging{user-select:none}
  .controls.isSticky{top:58px}
  .controls.isSticky + .chords{top:188px}
 }
+
+
+/* Compact auto-scroll control in the sticky header */
+.headerAutoScroll{display:flex;align-items:center;gap:6px;margin-left:auto}
+.headerAutoScroll>span{font-size:10px;font-weight:800;opacity:.9;white-space:nowrap}
+.headerAutoChoices{display:flex;gap:3px}
+.headerAutoChoice{width:23px;height:23px;padding:0;border:1px solid #ffffff66;border-radius:5px;background:#ffffff18;color:white;font-size:11px;font-weight:800;cursor:pointer}
+.headerAutoChoice.active{background:white;color:var(--green);border-color:white}
+.headerAutoChoice:disabled{opacity:.45;cursor:default}
+.headerAutoScroll.hidden{display:none!important}
+@media(max-width:750px){
+ .headerAutoScroll{gap:4px;margin-left:auto}
+ .headerAutoScroll>span{font-size:9px}
+ .headerAutoChoice{width:20px;height:21px;font-size:10px}
+}
