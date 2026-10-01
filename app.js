@@ -85,19 +85,23 @@ if(!state.sets)state.sets={};
 if(state.pendingFile===undefined)state.pendingFile=null;
 var autoScrollFrame=null;
 var autoScrollLast=0;
+var autoScrollRemainder=0;
 function stopAutoScroll(){
  if(autoScrollFrame){cancelAnimationFrame(autoScrollFrame);autoScrollFrame=null;}
  autoScrollLast=0;
+ autoScrollRemainder=0;
 }
 function autoScrollStep(ts){
  if(!state.settings||state.settings.view!=="scroll"||state.settings.autoScroll<=0||state.session.view!=="song"||state.session.edit){stopAutoScroll();return;}
  if(!autoScrollLast)autoScrollLast=ts;
  var dt=Math.min(80,ts-autoScrollLast)/1000;autoScrollLast=ts;
- var speed=[0,6,12,24,40,60][state.settings.autoScroll]||0;
+ var speed=[0,5,10,24,40,60][state.settings.autoScroll]||0;
  var scroller=document.scrollingElement||document.documentElement;
  var max=Math.max(0,scroller.scrollHeight-window.innerHeight);
  if(max<=0||scroller.scrollTop>=max-1){stopAutoScroll();return;}
- scroller.scrollTop=Math.min(max,scroller.scrollTop+speed*dt);
+ autoScrollRemainder+=speed*dt;
+ var pixels=Math.floor(autoScrollRemainder);
+ if(pixels>0){scroller.scrollTop=Math.min(max,scroller.scrollTop+pixels);autoScrollRemainder-=pixels;}
  autoScrollFrame=requestAnimationFrame(autoScrollStep);
 }
 function startAutoScroll(){
@@ -108,6 +112,8 @@ function startAutoScroll(){
 }
 function syncAutoScrollControl(){
  var val=Number(state.settings.autoScroll)||0;
+ var toolbar=document.getElementById("scrollToolbar");
+ if(toolbar)toolbar.classList.toggle("isSticky",state.settings.view==="scroll"&&!state.session.edit);
  document.querySelectorAll(".autoScrollChoice").forEach(function(b){
   b.classList.toggle("active",Number(b.getAttribute("data-speed"))===val);
   b.disabled=state.settings.view!=="scroll"||state.session.edit;
@@ -280,6 +286,7 @@ function renderChords(s){
  var el=document.getElementById("chords");
  el.innerHTML=chordNames(s).map(function(n){var x=transpose(n,state.settings.shift);return '<div class="chordbox"><div class="chordname">'+esc(x)+'</div><div class="diagram">'+fretDiagram(x)+'</div></div>';}).join("");
  el.style.position=state.settings.pin?"sticky":"static";
+ el.style.top=state.settings.view==="scroll"?"132px":"64px";
 }
 function displayLine(l){
  var text=l.text||"", chords=(l.chords||[]).slice().sort(function(a,b){return (Number(a.pos)||0)-(Number(b.pos)||0);});
