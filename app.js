@@ -92,23 +92,25 @@ function autoScrollTick(){
  var max=Math.max(0,document.documentElement.scrollHeight-window.innerHeight);
  var current=Math.round(window.scrollY||document.documentElement.scrollTop||document.body.scrollTop||0);
  if(max<=0||current>=max-1){stopAutoScroll();return;}
- var step=[0,1,2,3,5,7][state.settings.autoScroll]||0;
+ var step=[0,1,2,3,4,5][state.settings.autoScroll]||0;
  window.scrollBy(0,step);
 }
 function startAutoScroll(){
  stopAutoScroll();
  if(state.settings.view==="scroll"&&state.settings.autoScroll>0&&!state.session.edit){
-  autoScrollTimer=setInterval(autoScrollTick,40);
+  autoScrollTimer=setInterval(autoScrollTick,100);
  }
 }
 function syncAutoScrollControl(){
  var val=Number(state.settings.autoScroll)||0;
  var controls=document.querySelector(".controls");
  if(controls)controls.classList.toggle("isSticky",state.settings.view==="scroll"&&!state.session.edit);
- document.querySelectorAll(".autoScrollChoice").forEach(function(b){
+ document.querySelectorAll(".autoScrollChoice,.headerAutoChoice").forEach(function(b){
   b.classList.toggle("active",Number(b.getAttribute("data-speed"))===val);
   b.disabled=state.settings.view!=="scroll"||state.session.edit;
  });
+ var headerAuto=document.getElementById("headerAutoScroll");
+ if(headerAuto)headerAuto.classList.toggle("hidden",state.session.view!=="song"||state.session.edit);
 }
 function currentSong(){return state.session.edit?state.session.draft:state.songs[state.session.songId];}
 function transpose(chord,shift){
@@ -635,7 +637,7 @@ document.getElementById("search").oninput=renderLibrary;
 document.getElementById("instrument").onchange=function(e){state.settings.instrument=e.target.value;save();renderSong();};
 document.getElementById("viewMode").onchange=function(e){state.settings.view=e.target.value;if(state.settings.view!=="scroll"){state.settings.autoScroll=0;}save();renderSong();startAutoScroll();};
 document.getElementById("pinToggle").onclick=function(){state.settings.pin=!state.settings.pin;save();renderSong();};
-document.querySelectorAll(".autoScrollChoice").forEach(function(b){b.onclick=function(){
+document.querySelectorAll(".autoScrollChoice,.headerAutoChoice").forEach(function(b){b.onclick=function(){
  state.settings.autoScroll=Number(b.getAttribute("data-speed"))||0;
  save();syncAutoScrollControl();
  if(state.settings.autoScroll>0)startAutoScroll();else stopAutoScroll();
