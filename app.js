@@ -331,7 +331,7 @@ function displayLine(l){
   return h+'</div></div>';
  }
  var words=[],m;
- var re=/\\S+/g;
+ var re=/\S+/g;
  while((m=re.exec(text)))words.push({text:m[0],start:m.index,end:re.lastIndex});
  var chordByWord=words.map(function(){return[];});
  chords.forEach(function(ch){
