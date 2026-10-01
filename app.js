@@ -240,6 +240,15 @@ function show(view){
 }
 function render(){
  show(state.session.view);
+ var headerBrand=document.getElementById("headerBrand");
+ if(headerBrand){
+  if(state.session.view==="song"){
+   var brandSong=currentSong();
+   headerBrand.textContent=brandSong&&brandSong.title?brandSong.title:"Your Songbook";
+  }else{
+   headerBrand.textContent="Your Songbook";
+  }
+ }
  var headerAuto=document.getElementById("headerAutoScroll");
  if(headerAuto)headerAuto.classList.toggle("hidden",state.session.view!=="song"||state.session.edit);
  var headerChords=document.getElementById("headerChordBar");
