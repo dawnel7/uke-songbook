@@ -739,7 +739,11 @@ function saveLibrary(){
 function saveCopy(){
  var d=state.session.draft;if(!d)return;
  if(!d.title.trim()){alert("Please give the song a title before saving.");return;}
- var copy=clone(d);copy.id=uid("song");copy.title=(copy.title||"Untitled Song")+" (Copy)";if(!copy.substitutions)copy.substitutions={};
+ var name=prompt("Name this copy:",d.title);
+ if(name===null)return;
+ name=name.trim();
+ if(!name){alert("Please enter a name for the copy.");return;}
+ var copy=clone(d);copy.id=uid("song");copy.title=name;if(!copy.substitutions)copy.substitutions={};
  state.songs[copy.id]=copy;state.session.songId=copy.id;state.session.draft=null;state.session.edit=false;state.session.draftNew=false;window.__songUndo=[];save();render();
 }
 function cancelEdit(){
