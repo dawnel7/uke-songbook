@@ -512,6 +512,19 @@ function mergeNextIfAtEnd(doc){
 }
 function bindDocChord(chip,doc){
  chip.contentEditable="true";chip.spellcheck=false;
+ chip.addEventListener("pointerdown",function(e){
+  if(e.button!==0)return;
+  window.__docChordDrag={
+   chip:chip,
+   doc:doc,
+   startX:e.clientX,
+   startY:e.clientY,
+   moved:false
+  };
+  chip.classList.add("docChordPending");
+  window.addEventListener("pointermove",onDocChordMove);
+  window.addEventListener("pointerup",onDocChordUp,{once:true});
+ });
  chip.addEventListener("keydown",function(e){
   if(e.key==="Enter"){e.preventDefault();e.stopPropagation();placeCaretAtEnd(chip);return;}
   if(e.ctrlKey||e.metaKey||e.altKey)return;
