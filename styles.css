@@ -225,9 +225,28 @@ body.chordDragging{user-select:none}
 @media(max-width:750px){
  .controls{padding:10px}
  .scrollToolbar{grid-template-columns:1fr;gap:8px}
- .scrollToolbar .transposeRow{flex-wrap:wrap}
- .scrollToolbar .transposeRow .transposeKey{order:0;flex:1}
- .scrollToolbar .transposeRow #pinToggle{flex-basis:auto}
+ .scrollToolbar .transposeRow{
+   flex-wrap:nowrap;
+   width:100%;
+   gap:5px;
+ }
+ .scrollToolbar .transposeRow .btn{
+   flex:0 1 auto;
+   min-width:0;
+   padding-left:8px;
+   padding-right:8px;
+ }
+ .scrollToolbar .transposeRow .transposeKey{
+   order:0;
+   flex:1 1 auto;
+   min-width:70px;
+   padding-left:2px;
+   padding-right:2px;
+ }
+ .scrollToolbar .transposeRow #pinToggle{
+   flex:0 0 auto;
+   flex-basis:auto;
+ }
  .controls.isSticky{top:58px}
  .controls.isSticky + .chords{top:188px}
 }
