@@ -85,10 +85,11 @@ function autoScrollStep(ts){
  if(!state.settings||state.settings.view!=="scroll"||state.settings.autoScroll<=0||state.session.view!=="song"||state.session.edit){stopAutoScroll();return;}
  if(!autoScrollLast)autoScrollLast=ts;
  var dt=Math.min(80,ts-autoScrollLast)/1000;autoScrollLast=ts;
- var speed=[0,10,20,32,46,62][state.settings.autoScroll]||0;
- var max=document.documentElement.scrollHeight-window.innerHeight;
- if(max<=0||window.scrollY>=max-1){stopAutoScroll();return;}
- window.scrollBy(0,speed*dt);
+ var speed=[0,9,18,30,44,60][state.settings.autoScroll]||0;
+ var scroller=document.scrollingElement||document.documentElement;
+ var max=Math.max(0,scroller.scrollHeight-window.innerHeight);
+ if(max<=0||scroller.scrollTop>=max-1){stopAutoScroll();return;}
+ scroller.scrollTop=Math.min(max,scroller.scrollTop+speed*dt);
  autoScrollFrame=requestAnimationFrame(autoScrollStep);
 }
 function startAutoScroll(){
@@ -98,10 +99,11 @@ function startAutoScroll(){
  }
 }
 function syncAutoScrollControl(){
- var el=document.getElementById("autoScroll");
- var val=document.getElementById("autoScrollValue");
- if(el){el.value=String(state.settings.autoScroll||0);el.disabled=state.settings.view!=="scroll"||state.session.edit;}
- if(val)val.textContent=String(state.settings.autoScroll||0);
+ var val=Number(state.settings.autoScroll)||0;
+ document.querySelectorAll(".autoScrollChoice").forEach(function(b){
+  b.classList.toggle("active",Number(b.getAttribute("data-speed"))===val);
+  b.disabled=state.settings.view!=="scroll"||state.session.edit;
+ });
 }
 function currentSong(){return state.session.edit?state.session.draft:state.songs[state.session.songId];}
 function transpose(chord,shift){
@@ -651,7 +653,11 @@ document.getElementById("search").oninput=renderLibrary;
 document.getElementById("instrument").onchange=function(e){state.settings.instrument=e.target.value;save();renderSong();};
 document.getElementById("viewMode").onchange=function(e){state.settings.view=e.target.value;if(state.settings.view!=="scroll"){state.settings.autoScroll=0;}save();renderSong();startAutoScroll();};
 document.getElementById("pinToggle").onclick=function(){state.settings.pin=!state.settings.pin;save();renderSong();};
-document.getElementById("autoScroll").oninput=function(e){state.settings.autoScroll=Number(e.target.value)||0;save();syncAutoScrollControl();if(state.settings.autoScroll>0)startAutoScroll();else stopAutoScroll();};
+document.querySelectorAll(".autoScrollChoice").forEach(function(b){b.onclick=function(){
+ state.settings.autoScroll=Number(b.getAttribute("data-speed"))||0;
+ save();syncAutoScrollControl();
+ if(state.settings.autoScroll>0)startAutoScroll();else stopAutoScroll();
+};});
 document.getElementById("up").onclick=function(){state.settings.shift++;save();renderSong();};
 document.getElementById("down").onclick=function(){state.settings.shift--;save();renderSong();};
 document.getElementById("key").onchange=function(e){state.settings.shift=pitchIndex(e.target.value)-pitchIndex(currentSong().key);save();renderSong();startAutoScroll();};
