@@ -23,7 +23,18 @@
 @media(max-width:750px){.editSectionMenu{opacity:.45}}
 
 /* Word-document style song editor */
-.wordEditToolbar{display:flex;align-items:center;gap:14px;margin:0 0 14px;padding:0 0 10px;border-bottom:1px solid var(--line)}
+.wordEditToolbar{
+  position:sticky;
+  top:64px;
+  z-index:10;
+  display:flex;
+  align-items:center;
+  gap:14px;
+  margin:0 0 14px;
+  padding:10px 0 10px;
+  border-bottom:1px solid var(--line);
+  background:var(--paper);
+}
 .wordEditHint{font-size:13px;color:var(--muted)}
 .wordDocument{font-size:19px}
 .wordLine{margin:0 0 15px}
