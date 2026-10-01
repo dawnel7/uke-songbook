@@ -302,3 +302,42 @@ header .headerChordBar.hidden{display:none!important}
 @media(max-width:750px){
   #headerBrand{max-width:28vw}
 }
+
+
+/* Read-only song view: keep lyric words intact and give each chord its own
+   measured space so chords never sit on top of neighboring words. */
+.lineWords{align-items:flex-end}
+.displayWordCell{
+  display:inline-flex;
+  flex-direction:column;
+  vertical-align:top;
+  margin:0 .3em .2em 0;
+  min-width:max-content;
+  position:relative;
+}
+.displayChordStack{
+  min-height:1.25em;
+  display:flex;
+  align-items:flex-end;
+  justify-content:flex-start;
+  gap:.35em;
+  white-space:nowrap;
+}
+.displayWord{
+  white-space:pre;
+}
+.displayWordCell .displayChord{
+  display:inline-block;
+  width:auto;
+  margin:0;
+  padding:0;
+  position:static;
+  top:auto;
+  overflow:visible;
+  white-space:nowrap;
+  color:var(--green);
+  font-weight:850;
+  font-size:.9em;
+  line-height:1;
+  z-index:2;
+}
