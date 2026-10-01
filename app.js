@@ -393,24 +393,27 @@ function renderDocLine(l,si,li){
  return h+'</div>';
 }
 function normalizeSongText(v){return String(v||"").replace(/\r/g,"");}
-function pushSongUndo(doc,snapshot){
- if(!doc||window.__restoringUndo)return;
- var snap=snapshot||JSON.stringify(currentSong().sections);
+function pushSongUndo(doc,beforeSnapshot,afterSnapshot){
+ if(!doc||window.__restoringUndo||!beforeSnapshot||!afterSnapshot)return;
+ if(beforeSnapshot===afterSnapshot)return;
  var stack=window.__songUndo||[];
- if(stack.length&&stack[stack.length-1]===snap)return;
- stack.push(snap);
+ stack.push({before:beforeSnapshot,after:afterSnapshot});
  if(stack.length>50)stack.shift();
  window.__songUndo=stack;
  updateUndoButton();
 }
 function undoSongEdit(doc){
- var stack=window.__songUndo||[];if(!stack.length)return;
- var snap=stack.pop();
+ var stack=window.__songUndo||[];
+ if(!stack.length)return;
+ var action=stack.pop();
+ if(!action||!action.before)return;
  try{
-  currentSong().sections=JSON.parse(snap);
   window.__restoringUndo=true;
+  currentSong().sections=JSON.parse(action.before);
   renderSong();
- }finally{window.__restoringUndo=false;}
+ }finally{
+  window.__restoringUndo=false;
+ }
  updateUndoButton();
 }
 function updateUndoButton(){
@@ -438,12 +441,13 @@ function onDocChordUp(e){
  if(!d.moved)return;
  var doc=d.chip.closest(".songDocument"),range=caretRangeIn(doc,e.clientX,e.clientY);if(!range)return;
  if(range.startContainer===d.chip||d.chip.contains(range.startContainer))return;
- // Record only the state immediately before this move.
- pushSongUndo(doc,d.beforeSnapshot);
+ // Complete the move first, then record this one move as a single
+ // undo action containing both its before and after states.
  d.chip.remove();
  insertNodeAtRange(range,d.chip);
  syncWordDocument(doc);
- updateUndoButton();
+ var afterSnapshot=JSON.stringify(currentSong().sections);
+ pushSongUndo(doc,d.beforeSnapshot,afterSnapshot);
 }
 function insertNodeAtRange(range,node){
  var r=range.cloneRange();r.collapse(true);
