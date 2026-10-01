@@ -71,11 +71,38 @@ function fresh(){return {songs:{hallelujah:makeSong()},sets:{},settings:{instrum
 var state;
 try{state=JSON.parse(localStorage.getItem(STORAGE));}catch(e){state=null;}
 if(!state||!state.songs)state=fresh();
-if(!state.session)state=fresh();
+if(!state.session)state=fresh();\nif(!state.settings)state=fresh().settings;\nif(state.settings.autoScroll==null)state.settings.autoScroll=0;
 if(!state.songs||Object.keys(state.songs).length===0){state.songs={hallelujah:makeSong()};}
 if(!state.songs.hallelujah){state.songs.hallelujah=makeSong();}
 Object.keys(state.songs).forEach(function(id){var s=state.songs[id];if(s&&s.title==="New Song"&&s.artist==="Unknown"&&s.source&&s.source.type==="Manual")delete state.songs[id];});
-function save(){try{localStorage.setItem(STORAGE,JSON.stringify(state));}catch(e){}}
+var autoScrollFrame=null;
+var autoScrollLast=0;
+function stopAutoScroll(){
+ if(autoScrollFrame){cancelAnimationFrame(autoScrollFrame);autoScrollFrame=null;}
+ autoScrollLast=0;
+}
+function autoScrollStep(ts){
+ if(!state.settings||state.settings.view!=="scroll"||state.settings.autoScroll<=0||state.session.view!=="song"||state.session.edit){stopAutoScroll();return;}
+ if(!autoScrollLast)autoScrollLast=ts;
+ var dt=Math.min(80,ts-autoScrollLast)/1000;autoScrollLast=ts;
+ var speed=[0,10,20,32,46,62][state.settings.autoScroll]||0;
+ var max=document.documentElement.scrollHeight-window.innerHeight;
+ if(max<=0||window.scrollY>=max-1){stopAutoScroll();return;}
+ window.scrollBy(0,speed*dt);
+ autoScrollFrame=requestAnimationFrame(autoScrollStep);
+}
+function startAutoScroll(){
+ stopAutoScroll();
+ if(state.settings.view==="scroll"&&state.settings.autoScroll>0&&!state.session.edit){
+  autoScrollFrame=requestAnimationFrame(autoScrollStep);
+ }
+}
+function syncAutoScrollControl(){
+ var el=document.getElementById("autoScroll");
+ var val=document.getElementById("autoScrollValue");
+ if(el){el.value=String(state.settings.autoScroll||0);el.disabled=state.settings.view!=="scroll"||state.session.edit;}
+ if(val)val.textContent=String(state.settings.autoScroll||0);
+}
 function currentSong(){return state.session.edit?state.session.draft:state.songs[state.session.songId];}
 function transpose(chord,shift){
  var m=String(chord).match(/^([A-G](?:#|b)?)(.*)$/);if(!m)return chord;
@@ -216,13 +243,13 @@ function openNewSong(){
  var d={id:null,title:"New Song",artist:"",key:"C",genre:"",moods:[],duration:180,source:{type:"Manual"},sections:[{name:"Verse",lines:[line("Add your lyrics here", [c("C",0)])]}]};
  state.session.songId=null;state.session.view="song";state.session.edit=true;state.session.draft=d;state.session.draftNew=true;render();
 }
-function renderSong(){
+function renderSong(){\n stopAutoScroll();
  var s=currentSong();if(!s){state.session.view="library";return render();}
  document.getElementById("songTitle").textContent=s.title||"Untitled Song";
  document.getElementById("songMeta").textContent=s.artist||"New song";
  document.getElementById("songDetails").textContent="Key of "+transpose(s.key,state.settings.shift)+" · "+(s.genre||"Genre not set")+" · "+(s.moods||[]).join(" · ")+(s.duration?" · "+Math.round(s.duration/60)+" min":"");
  document.getElementById("instrument").value=state.settings.instrument;
- document.getElementById("viewMode").value=state.settings.view;
+ document.getElementById("viewMode").value=state.settings.view;\n syncAutoScrollControl();
  document.getElementById("pinToggle").textContent=state.settings.pin?"📌 Chord bar on":"📌 Chord bar off";
  var key=document.getElementById("key");key.innerHTML=DISPLAY_NOTES.map(function(n){return '<option value="'+n+'">'+n+"</option>";}).join("");key.value=transpose(s.key,state.settings.shift);
  var transposeKey=document.getElementById("transposeKeyLabel");if(transposeKey)transposeKey.textContent=transpose(s.key,state.settings.shift);
@@ -622,11 +649,12 @@ document.querySelectorAll(".navbtn").forEach(function(b){b.onclick=function(){if
 document.getElementById("back").onclick=function(){if(state.session.edit){cancelEdit();}else{openLibrary();}};
 document.getElementById("search").oninput=renderLibrary;
 document.getElementById("instrument").onchange=function(e){state.settings.instrument=e.target.value;save();renderSong();};
-document.getElementById("viewMode").onchange=function(e){state.settings.view=e.target.value;save();renderSong();};
+document.getElementById("viewMode").onchange=function(e){state.settings.view=e.target.value;if(state.settings.view!=="scroll"){state.settings.autoScroll=0;}save();renderSong();startAutoScroll();};
 document.getElementById("pinToggle").onclick=function(){state.settings.pin=!state.settings.pin;save();renderSong();};
+document.getElementById("autoScroll").oninput=function(e){state.settings.autoScroll=Number(e.target.value)||0;save();syncAutoScrollControl();if(state.settings.autoScroll>0)startAutoScroll();else stopAutoScroll();};
 document.getElementById("up").onclick=function(){state.settings.shift++;save();renderSong();};
 document.getElementById("down").onclick=function(){state.settings.shift--;save();renderSong();};
-document.getElementById("key").onchange=function(e){state.settings.shift=pitchIndex(e.target.value)-pitchIndex(currentSong().key);save();renderSong();};
+document.getElementById("key").onchange=function(e){state.settings.shift=pitchIndex(e.target.value)-pitchIndex(currentSong().key);save();renderSong();startAutoScroll();};
 document.getElementById("newSong").onclick=openNewSong;
 document.getElementById("newSet").onclick=function(){var id=uid("set");state.sets[id]={id:id,name:"New Set",songIds:[]};openSet(id);};
 document.getElementById("setDone").onclick=function(){state.session.view="sets";save();render();};
