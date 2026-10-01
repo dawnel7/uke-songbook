@@ -237,6 +237,8 @@ function show(view){
  if(id)document.getElementById(id).classList.remove("hidden");
  document.querySelectorAll(".navbtn").forEach(function(b){b.classList.toggle("active",b.getAttribute("data-view")===view);});
  document.getElementById("back").classList.toggle("hidden",view==="library"||view==="sets"||view==="import");
+ var topNav=document.getElementById("topNav");
+ if(topNav)topNav.classList.toggle("hidden",view==="song");
 }
 function render(){
  show(state.session.view);
