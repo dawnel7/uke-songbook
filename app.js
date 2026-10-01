@@ -242,6 +242,8 @@ function render(){
  show(state.session.view);
  var headerAuto=document.getElementById("headerAutoScroll");
  if(headerAuto)headerAuto.classList.toggle("hidden",state.session.view!=="song"||state.session.edit);
+ var headerChords=document.getElementById("headerChordBar");
+ if(headerChords)headerChords.classList.toggle("hidden",state.session.view!=="song"||state.session.edit);
  if(state.session.view==="library")renderLibrary();
  if(state.session.view==="song")renderSong();
  if(state.session.view==="sets")renderSets();
@@ -291,15 +293,26 @@ function renderSong(){
 }
 function renderChords(s){
  var el=document.getElementById("chords");
- el.innerHTML=chordNames(s).map(function(n){var x=transpose(n,state.settings.shift);return '<div class="chordbox"><div class="chordname">'+esc(x)+'</div><div class="diagram">'+fretDiagram(x)+'</div></div>';}).join("");
- el.style.position=state.settings.pin?"sticky":"static";
- if(state.settings.pin&&state.settings.view==="scroll"){
-  var header=document.querySelector("header");
-  var headerH=header?header.getBoundingClientRect().height:64;
-  el.style.top=Math.ceil(headerH+2)+"px";
- }else{
-  el.style.top=state.settings.view==="scroll"?"64px":"64px";
+ var header=document.getElementById("headerChordBar");
+ var names=chordNames(s);
+ var items=names.map(function(n){
+  var x=transpose(n,state.settings.shift);
+  return '<div class="chordbox"><div class="chordname">'+esc(x)+'</div><div class="diagram">'+fretDiagram(x)+'</div></div>';
+ }).join("");
+
+ el.innerHTML=items;
+
+ if(header){
+  header.innerHTML=names.map(function(n){
+   var x=transpose(n,state.settings.shift);
+   return '<div class="headerChordItem" title="'+esc(x)+'"><div class="headerChordName">'+esc(x)+'</div><div class="headerChordDiagram">'+fretDiagram(x)+'</div></div>';
+  }).join("");
+  header.classList.toggle("hidden",!state.settings.pin||state.session.view!=="song"||state.session.edit);
  }
+
+ el.classList.toggle("hidden",!!state.settings.pin);
+ el.style.position="static";
+ el.style.top="";
 }
 function displayLine(l){
  var text=l.text||"", chords=(l.chords||[]).slice().sort(function(a,b){return (Number(a.pos)||0)-(Number(b.pos)||0);});
