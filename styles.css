@@ -235,3 +235,61 @@ body.chordDragging{user-select:none}
  .headerAutoScroll>span{font-size:9px}
  .headerAutoChoice{width:20px;height:21px;font-size:10px}
 }
+
+
+/* Compact pinned chord bar in the song header */
+header .headerChordBar{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  flex:0 1 auto;
+  min-width:0;
+  max-width:38vw;
+  overflow:hidden;
+}
+header .headerChordBar.hidden{display:none!important}
+.headerChordItem{
+  flex:0 0 auto;
+  width:36px;
+  min-width:36px;
+  text-align:center;
+  color:white;
+  line-height:1;
+}
+.headerChordName{
+  font-size:10px;
+  font-weight:850;
+  white-space:nowrap;
+  margin-bottom:1px;
+}
+.headerChordDiagram{
+  width:32px;
+  height:27px;
+  margin:0 auto;
+  overflow:hidden;
+}
+.headerChordDiagram .fretSvg{
+  width:32px;
+  height:27px;
+  display:block;
+  margin:0 auto;
+}
+.headerChordDiagram .stringLine,
+.headerChordDiagram .fretLine{stroke:#ffffffb8}
+.headerChordDiagram .nutLine{stroke:white}
+.headerChordDiagram .openDot{fill:var(--green);stroke:white}
+.headerChordDiagram .fingerDot{fill:white;stroke:white}
+.headerChordDiagram .fingerNum{fill:var(--green);font-size:6px}
+.headerChordDiagram .muteMark{fill:white;font-size:11px}
+
+@media(max-width:900px){
+  header .headerChordBar{max-width:32vw;gap:4px}
+  .headerChordItem{width:33px;min-width:33px}
+  .headerChordDiagram,.headerChordDiagram .fretSvg{width:29px;height:25px}
+  .headerChordName{font-size:9px}
+}
+@media(max-width:750px){
+  header .headerChordBar{max-width:34vw}
+  .headerChordItem{width:31px;min-width:31px}
+  .headerChordDiagram,.headerChordDiagram .fretSvg{width:27px;height:24px}
+}
