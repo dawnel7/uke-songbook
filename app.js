@@ -296,8 +296,7 @@ function renderSong(){
  var transposeKey=document.getElementById("transposeKeyLabel");if(transposeKey)transposeKey.textContent=transpose(s.key,state.settings.shift);
  var actions=document.querySelector(".titleActions");
  if(state.session.edit){
-  actions.innerHTML='<button id="saveLibrary" class="primary">Save to Library</button><button id="cancelEdit" class="btn">Cancel</button>'+(state.session.draftNew?'':'<button id="restoreOriginal" class="btn">↩ Return to Original</button>')+'<button id="songMenu" class="btn">⋯</button>';
-  bindEditActions();
+  actions.innerHTML='';
  }else{
   actions.innerHTML='<button id="songEdit" class="primary">Edit</button><button id="songMenu" class="btn">⋯</button>';
   document.getElementById("songEdit").onclick=function(){beginEdit();};
@@ -727,7 +726,7 @@ function renderSubstitutions(s){
  list.innerHTML=keys.length?keys.map(function(k){return '<div class="substitutionItem"><span>'+esc(k)+' → '+esc(s.substitutions[k])+'</span><button class="btn" data-remove-sub="'+esc(k)+'">Remove</button></div>';}).join(""):'<span class="muted">No song-specific substitutions yet.</span>';
  list.querySelectorAll("[data-remove-sub]").forEach(function(b){b.onclick=function(){var k=b.getAttribute("data-remove-sub"),before=JSON.stringify(s.sections);delete s.substitutions[k];pushSongUndo(document.querySelector(".songDocument"),before,JSON.stringify(s.sections));renderSong();};});
  var apply=document.getElementById("applySubstitution");
- if(apply)apply.onclick=function(){var from=(document.getElementById("subFrom").value||"").trim(),to=(document.getElementById("subTo").value||"").trim();if(!from||!to||from===to)return;var before=JSON.stringify(s.sections);s.sections.forEach(function(sec){sec.lines.forEach(function(l){l.chords.forEach(function(ch){if(ch.name===from)ch.name=to;});});});s.substitutions[from]=to;pushSongUndo(document.querySelector(".songDocument"),before,JSON.stringify(s.sections));document.getElementById("subFrom").value="";document.getElementById("subTo").value="";renderSong();};
+ if(apply)apply.onclick=function(){var from=(document.getElementById("subFrom").value||"").trim(),to=(document.getElementById("subTo").value||"").trim();if(!from||!to||from===to)return;var before=JSON.stringify(s.sections);s.substitutions[from]=to;pushSongUndo(document.querySelector(".songDocument"),before,JSON.stringify(s.sections));document.getElementById("subFrom").value="";document.getElementById("subTo").value="";renderSong();};
 }
 function saveLibrary(){
  var d=state.session.draft;if(!d)return;
