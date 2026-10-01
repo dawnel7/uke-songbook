@@ -393,9 +393,9 @@ function renderDocLine(l,si,li){
  return h+'</div>';
 }
 function normalizeSongText(v){return String(v||"").replace(/\r/g,"");}
-function pushSongUndo(doc){
+function pushSongUndo(doc,snapshot){
  if(!doc||window.__restoringUndo)return;
- var snap=JSON.stringify(currentSong().sections);
+ var snap=snapshot||JSON.stringify(currentSong().sections);
  var stack=window.__songUndo||[];
  if(stack.length&&stack[stack.length-1]===snap)return;
  stack.push(snap);
@@ -438,7 +438,8 @@ function onDocChordUp(e){
  if(!d.moved)return;
  var doc=d.chip.closest(".songDocument"),range=caretRangeIn(doc,e.clientX,e.clientY);if(!range)return;
  if(range.startContainer===d.chip||d.chip.contains(range.startContainer))return;
- pushSongUndo(doc);
+ // Record only the state immediately before this move.
+ pushSongUndo(doc,d.beforeSnapshot);
  d.chip.remove();
  insertNodeAtRange(range,d.chip);
  syncWordDocument(doc);
@@ -533,12 +534,16 @@ function bindDocChord(chip,doc){
  chip.contentEditable="true";chip.spellcheck=false;
  chip.addEventListener("pointerdown",function(e){
   if(e.button!==0)return;
+  // Capture exactly the state immediately before this drag.
+  // Sync first so the snapshot reflects any previous chord move.
+  syncWordDocument(doc);
   window.__docChordDrag={
    chip:chip,
    doc:doc,
    startX:e.clientX,
    startY:e.clientY,
-   moved:false
+   moved:false,
+   beforeSnapshot:JSON.stringify(currentSong().sections)
   };
   chip.classList.add("docChordPending");
   window.addEventListener("pointermove",onDocChordMove);
