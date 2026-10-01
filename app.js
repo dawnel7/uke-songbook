@@ -226,6 +226,8 @@ function show(view){
 }
 function render(){
  show(state.session.view);
+ var headerAuto=document.getElementById("headerAutoScroll");
+ if(headerAuto)headerAuto.classList.toggle("hidden",state.session.view!=="song"||state.session.edit);
  if(state.session.view==="library")renderLibrary();
  if(state.session.view==="song")renderSong();
  if(state.session.view==="sets")renderSets();
