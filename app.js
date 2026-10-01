@@ -361,7 +361,7 @@ function renderLyrics(s){
  if(state.session.edit){renderFreeEditor(el,s);}else{var out="";s.sections.forEach(function(sec){out+='<section class="section"><h3>'+esc(sec.name)+"</h3>";sec.lines.forEach(function(l){out+=displayLine(l);});out+="</section>";});el.innerHTML=out;}
 }
 function renderFreeEditor(el,s){
- var h='<div class="wordEditToolbar"><span>Edit the song directly. Chords are editable text too. Select, copy, cut, paste, press Return, or drag a chord.</span><div class="wordEditActions"><button id="undoEditBtn" class="btn" disabled>↶ Undo</button><button id="insertChordBtn" class="btn">＋ Chord</button></div></div>';
+ var h='<div class="wordEditToolbar"><span>Edit the song directly. Chords are editable text too. Select, copy, cut, paste, press Return, or drag a chord.</span><div class="wordEditActions"><button id="undoEditBtn" class="btn" disabled>↶ Undo</button></div></div>';
  h+='<div class="songDocument" contenteditable="true" spellcheck="true">';
  s.sections.forEach(function(sec,si){
   h+='<div class="docSection" data-si="'+si+'"><div class="docSectionHeading" data-heading="1">'+esc(sec.name)+'</div>';
