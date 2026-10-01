@@ -331,7 +331,7 @@ function displayLine(l){
  var text=l.text||"", chords=(l.chords||[]).slice().sort(function(a,b){return (Number(a.pos)||0)-(Number(b.pos)||0);});
  var h='<div class="songLine"><div class="lineWords'+(!text&&chords.length?' chordOnlyLine':'')+'">';
  if(!text){
-  chords.forEach(function(ch){h+='<span class="displayChord">'+esc(transpose(ch.name,state.settings.shift))+'</span>';});
+  chords.forEach(function(ch){h+='<span class="displayChord">'+esc(transpose(effectiveChordName(ch.name,s),state.settings.shift))+'</span>';});
   return h+'</div></div>';
  }
  var words=[],m;
@@ -353,7 +353,7 @@ function displayLine(l){
   h+=esc(text.slice(cursor,w.start));
   h+='<span class="displayWordCell">';
   h+='<span class="displayChordStack">';
-  chordByWord[i].forEach(function(ch){h+='<span class="displayChord">'+esc(transpose(ch.name,state.settings.shift))+'</span>';});
+  chordByWord[i].forEach(function(ch){h+='<span class="displayChord">'+esc(transpose(effectiveChordName(ch.name,s),state.settings.shift))+'</span>';});
   h+='</span><span class="displayWord">'+esc(w.text)+'</span></span>';
   cursor=w.end;
  });
@@ -391,7 +391,7 @@ function renderDocLine(l,si,li){
  chords.forEach(function(ch){
   var p=Math.max(0,Math.min(text.length,Number(ch.pos)||0));
   h+=esc(text.slice(cursor,p));
-  h+='<span class="docChord" contenteditable="true" spellcheck="false" data-chord="1">'+esc(transpose(ch.name,state.settings.shift))+'</span>';
+  h+='<span class="docChord" contenteditable="true" spellcheck="false" data-chord="1">'+esc(transpose(effectiveChordName(ch.name,s),state.settings.shift))+'</span>';
   cursor=p;
  });
  h+=esc(text.slice(cursor));
