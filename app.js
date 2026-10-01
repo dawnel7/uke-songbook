@@ -370,7 +370,7 @@ function renderFreeEditor(el,s){
  h+='<div class="songDocument" contenteditable="true" spellcheck="true">';
  s.sections.forEach(function(sec,si){
   h+='<div class="docSection" data-si="'+si+'"><div class="docSectionHeading" data-heading="1">'+esc(sec.name)+'</div>';
-  sec.lines.forEach(function(l,li){h+=renderDocLine(l,si,li);});
+  sec.lines.forEach(function(l,li){h+=renderDocLine(l,si,li,s);});
   h+='</div>';
  });
  h+='</div>';
@@ -384,7 +384,7 @@ function renderFreeEditor(el,s){
  };
  updateUndoButton();
 }
-function renderDocLine(l,si,li){
+function renderDocLine(l,si,li,s){
  var text=normalizeSongText(l.text||""), chords=(l.chords||[]).slice().sort(function(a,b){return (Number(a.pos)||0)-(Number(b.pos)||0);});
  var h='<div class="docLine'+(!text&&chords.length?' chordOnlyLine':'')+'" data-li="'+li+'">';
  var cursor=0;
