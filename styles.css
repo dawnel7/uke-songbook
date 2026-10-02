@@ -400,3 +400,7 @@ header .headerChordBar.hidden{display:none!important}
   .chordSubRow .btn{grid-column:1 / -1}
   .chordSubInput{min-width:0;width:100%;box-sizing:border-box}
 }
+
+
+/* Import review */
+.importMetaGrid{display:grid;grid-template-columns:2fr 2fr 1fr;gap:10px;margin:12px 0 14px}.importMetaGrid label,.importSourceLabel{font-size:13px;font-weight:800;color:var(--muted)}.importMetaGrid input,.importMetaGrid select{display:block;width:100%;box-sizing:border-box;margin-top:5px}.importSourceLabel{display:block}.importReviewActions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}.importSourceNote{margin-top:10px}@media(max-width:750px){.importMetaGrid{grid-template-columns:1fr}.importReviewActions{justify-content:stretch}.importReviewActions button{flex:1}}
