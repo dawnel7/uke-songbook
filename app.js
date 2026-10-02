@@ -840,13 +840,13 @@ async function loadPdfText(file){
 }
 function pdfTextLooksUsable(raw){
  var text=String(raw||"").trim();if(!text)return false;
- var replacement=(text.match(/�/g)||[]).length;
- var bad=(text.match(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g)||[]).length;
- var letters=(text.match(/[A-Za-z0-9]/g)||[]).length;
- var symbols=(text.match(/[�□]/g)||[]).length;
- return replacement===0&&bad===0&&letters>=Math.max(20,Math.floor(text.length*.18))&&symbols<Math.max(3,Math.floor(text.length*.03));
+ var replacement=(text.match(/�/g)||[]).length,bad=(text.match(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g)||[]).length;
+ var letters=(text.match(/[A-Za-z0-9]/g)||[]).length,symbols=(text.match(/[�□]/g)||[]).length;
+ var printable=text.replace(/[\r\n]/g,"").length,ascii=(text.match(/[\x20-\x7E\r\n]/g)||[]).length;
+ var asciiRatio=printable?ascii/printable:0,wordLike=(text.match(/\b[A-Za-z]{2,}\b/g)||[]).length;
+ return replacement===0&&bad===0&&letters>=Math.max(20,Math.floor(text.length*.18))&&symbols<Math.max(3,Math.floor(text.length*.03))&&asciiRatio>.88&&wordLike>=5;
 }
-async function loadOcrWorker(progress){
+function loadOcrWorker(progress){
  await loadExternalScript("https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/tesseract.min.js",function(){return !!window.Tesseract;});
  return window.Tesseract.createWorker("eng",1,{workerPath:"https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/worker.min.js",logger:function(m){
   if(progress&&m&&m.status)progress(m.status+(m.progress!=null?" "+Math.round(m.progress*100)+"%":""));
@@ -857,40 +857,27 @@ async function ocrImage(file,progress){
  try{var ret=await worker.recognize(file);return String(ret.data&&ret.data.text||"").trim();}
  finally{await worker.terminate();}
 }
+function ocrDataToAlignedText(data){
+ var words=(data&&data.words||[]).filter(function(w){return w&&String(w.text||"").trim()&&w.bbox;});
+ if(!words.length)return String(data&&data.text||"").trim();
+ var rows=[];
+ words.forEach(function(w){var y=(Number(w.bbox.y0||0)+Number(w.bbox.y1||0))/2,row=null;for(var i=0;i<rows.length;i++){if(Math.abs(rows[i].y-y)<=10){row=rows[i];break;}}if(!row){row={y:y,words:[]};rows.push(row);}row.words.push(w);});
+ rows.sort(function(a,b){return a.y-b.y;});var scale=6;
+ return rows.map(function(row){row.words.sort(function(a,b){return Number(a.bbox.x0)-Number(b.bbox.x0);});var out="",cursor=0;row.words.forEach(function(w){var x=Math.max(0,Math.round(Number(w.bbox.x0)/scale));while(cursor<x){out+=" ";cursor++;}var t=String(w.text||"").trim();out+=t;cursor+=t.length;});return out.replace(/\s+$/,"");}).join("\n").trim();
+}
 async function ocrPdf(file,progress){
  await loadExternalScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",function(){return !!window.pdfjsLib;});
  window.pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
  var pdf=await window.pdfjsLib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise,worker=await loadOcrWorker(progress),pages=[];
- try{
-  for(var i=1;i<=pdf.numPages;i++){
-   if(progress)progress("Reading PDF page "+i+" of "+pdf.numPages+"…");
-   var page=await pdf.getPage(i),viewport=page.getViewport({scale:2}),canvas=document.createElement("canvas"),ctx=canvas.getContext("2d");
-   canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);
-   await page.render({canvasContext:ctx,viewport:viewport}).promise;
-   var ret=await worker.recognize(canvas);pages.push(String(ret.data&&ret.data.text||"").trim());
-  }
- }finally{await worker.terminate();}
+ try{for(var i=1;i<=pdf.numPages;i++){if(progress)progress("Reading PDF page "+i+" of "+pdf.numPages+"…");var page=await pdf.getPage(i),viewport=page.getViewport({scale:2}),canvas=document.createElement("canvas"),ctx=canvas.getContext("2d");canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);await page.render({canvasContext:ctx,viewport:viewport}).promise;var ret=await worker.recognize(canvas);pages.push(ocrDataToAlignedText(ret.data));}}finally{await worker.terminate();}
  return pages.filter(Boolean).join("\n\n").trim();
 }
+function normalizeChordToken(token){var t=String(token||"").trim().replace(/^([a-g])/,function(_,r){return r.toUpperCase();});return /^[A-G](?:#|b)?(?:m|maj7|m7|7|6|m6|sus2|sus4|dim|aug|9)?$/.test(t)?t:"";}
 function parseImport(raw){
- var sections=[{name:"Imported song",lines:[]}],current=sections[0];
- raw.split(/\r?\n/).forEach(function(rawLine){
-  var lineText=rawLine.trim();if(!lineText)return;
-  var heading=lineText.replace(/^\[|\]$/g,"").replace(/:$/,"").trim();
-  if(/^(intro|verse(?:\s+\d+)?|chorus|bridge|outro|break|final chorus|pre-chorus|pre chorus)$/i.test(heading)){
-   current={name:heading,lines:[]};sections.push(current);return;
-  }
-  var chords=[],re=/(^|\s)([A-G](?:#|b)?(?:m|maj7|m7|7|6|m6|sus2|sus4|dim|aug|9)?)(?=\s|$)/g,m,out="",cursor=0;
-  while((m=re.exec(lineText))){
-   out+=lineText.slice(cursor,m.index);
-   chords.push({name:m[2],pos:out.replace(/\s+$/,"").length});
-   cursor=m.index+m[0].length;
-  }
-  out+=lineText.slice(cursor);
-  var leading=out.match(/^\s*/)[0].length,text=out.trim();
-  chords=chords.map(function(ch){return {name:ch.name,pos:Math.max(0,Math.min(text.length,ch.pos-leading))};});
-  current.lines.push({text:text,chords:chords});
- });
+ var sourceLines=String(raw||"").split(/\r?\n/),sections=[{name:"Imported song",lines:[]}],current=sections[0],pendingChords=null;
+ function chordLineInfo(s){var str=String(s||""),tokens=str.trim().split(/\s+/).filter(Boolean),valid=[],search=0;tokens.forEach(function(t){var n=normalizeChordToken(t),p=str.indexOf(t,search);search=p+t.length;if(n)valid.push({name:n,pos:p});});return tokens.length>0&&valid.length===tokens.length?valid:null;}
+ function addLine(rawLine,above){var original=String(rawLine||""),text=original.trim();if(!text)return;var chords=[],re=/(^|\s)([A-G](?:#|b)?(?:m|maj7|m7|7|6|m6|sus2|sus4|dim|aug|9)?)(?=\s|$)/gi,m,out="",cursor=0;while((m=re.exec(original))){var token=normalizeChordToken(m[2]);if(!token)continue;out+=original.slice(cursor,m.index);chords.push({name:token,pos:out.replace(/^\s+/,"").length});cursor=m.index+m[0].length;}out+=original.slice(cursor);var clean=out.trim(),leading=original.length-original.replace(/^\s+/,"").length;chords=chords.map(function(ch){return {name:ch.name,pos:Math.max(0,Math.min(clean.length,ch.pos))};});if(above){above.forEach(function(ch){var pos=Math.max(0,Math.min(clean.length,ch.pos-leading));if(!chords.some(function(x){return x.name===ch.name&&x.pos===pos;}))chords.push({name:ch.name,pos:pos});});chords.sort(function(a,b){return a.pos-b.pos;});}current.lines.push({text:clean,chords:chords});}
+ for(var i=0;i<sourceLines.length;i++){var rawLine=sourceLines[i],lineText=rawLine.trim();if(!lineText)continue;var heading=lineText.replace(/^\[|\]$/g,"").replace(/:$/,"").trim();if(/^(intro|verse(?:\s+\d+)?|chorus|bridge|outro|break|final chorus|pre-chorus|pre chorus)$/i.test(heading)){current={name:heading,lines:[]};sections.push(current);pendingChords=null;continue;}var ci=chordLineInfo(rawLine);if(ci){pendingChords=ci;continue;}addLine(rawLine,pendingChords);pendingChords=null;}
  return sections.filter(function(s){return s.lines.length;});
 }
 function inferredKey(raw){
