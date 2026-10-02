@@ -799,18 +799,128 @@ function renderPerformance(){
  s.sections.forEach(function(sec){html+='<section class="section"><h3>'+esc(sec.name)+"</h3>";sec.lines.forEach(function(l){html+=displayLine(l);});html+="</section>";});
  document.getElementById("performanceSong").innerHTML=html+"</div>";
 }
-function renderImport(){document.getElementById("importStatus").textContent=state.pendingFile?"Attached: "+state.pendingFile.name:"";}
+function renderImport(){
+ var status=document.getElementById("importStatus");
+ if(status)status.textContent=state.pendingFile?"Attached: "+state.pendingFile.name:"";
+}
+function loadExternalScript(src,test){
+ return new Promise(function(resolve,reject){
+  if(test())return resolve();
+  var existing=document.querySelector('script[data-external-src="'+src+'"]');
+  if(existing){existing.addEventListener("load",function(){test()?resolve():reject(new Error("Library did not load."));});existing.addEventListener("error",reject);return;}
+  var script=document.createElement("script");script.src=src;script.async=true;script.setAttribute("data-external-src",src);
+  script.onload=function(){test()?resolve():reject(new Error("Library did not load."));};
+  script.onerror=function(){reject(new Error("Could not load import library."));};
+  document.head.appendChild(script);
+ });
+}
+function importTitleFromName(name){
+ return String(name||"Imported Song").replace(/\.[^.]+$/,"").replace(/[_-]+/g," ").replace(/\s+/g," ").trim()||"Imported Song";
+}
+function pdfItemsToLines(items){
+ var rows=[];
+ items.filter(function(x){return x&&String(x.str||"").trim();}).forEach(function(x){
+  var y=Number(x.transform&&x.transform[5]||0),xpos=Number(x.transform&&x.transform[4]||0),text=String(x.str||"").trim(),row=null;
+  for(var i=0;i<rows.length;i++){if(Math.abs(rows[i].y-y)<=3){row=rows[i];break;}}
+  if(!row){row={y:y,items:[]};rows.push(row);}
+  row.items.push({x:xpos,text:text});
+ });
+ rows.sort(function(a,b){return b.y-a.y;});
+ return rows.map(function(row){row.items.sort(function(a,b){return a.x-b.x;});return row.items.map(function(x){return x.text;}).join(" ");}).join("\n");
+}
+async function loadPdfText(file){
+ await loadExternalScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",function(){return !!window.pdfjsLib;});
+ window.pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+ var pdf=await window.pdfjsLib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise,pages=[];
+ for(var i=1;i<=pdf.numPages;i++){var page=await pdf.getPage(i),content=await page.getTextContent();pages.push(pdfItemsToLines(content.items));}
+ return pages.join("\n\n").trim();
+}
+async function loadOcrWorker(progress){
+ await loadExternalScript("https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/tesseract.min.js",function(){return !!window.Tesseract;});
+ return window.Tesseract.createWorker("eng",1,{workerPath:"https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/worker.min.js",logger:function(m){
+  if(progress&&m&&m.status)progress(m.status+(m.progress!=null?" "+Math.round(m.progress*100)+"%":""));
+ }});
+}
+async function ocrImage(file,progress){
+ var worker=await loadOcrWorker(progress);
+ try{var ret=await worker.recognize(file);return String(ret.data&&ret.data.text||"").trim();}
+ finally{await worker.terminate();}
+}
+async function ocrPdf(file,progress){
+ await loadExternalScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",function(){return !!window.pdfjsLib;});
+ window.pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+ var pdf=await window.pdfjsLib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise,worker=await loadOcrWorker(progress),pages=[];
+ try{
+  for(var i=1;i<=pdf.numPages;i++){
+   if(progress)progress("Reading PDF page "+i+" of "+pdf.numPages+"…");
+   var page=await pdf.getPage(i),viewport=page.getViewport({scale:2}),canvas=document.createElement("canvas"),ctx=canvas.getContext("2d");
+   canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);
+   await page.render({canvasContext:ctx,viewport:viewport}).promise;
+   var ret=await worker.recognize(canvas);pages.push(String(ret.data&&ret.data.text||"").trim());
+  }
+ }finally{await worker.terminate();}
+ return pages.filter(Boolean).join("\n\n").trim();
+}
 function parseImport(raw){
  var sections=[{name:"Imported song",lines:[]}],current=sections[0];
  raw.split(/\r?\n/).forEach(function(rawLine){
   var lineText=rawLine.trim();if(!lineText)return;
-  if(/^(intro|verse|chorus|bridge|outro|break|final chorus)\s*:??$/i.test(lineText)){current={name:lineText.replace(/:$/,""),lines:[]};sections.push(current);return;}
-  var chords=[],re=/(^|\s)([A-G](?:#|b)?(?:m|maj7|7|sus2|sus4|dim|aug)?)(?=\s|$)/g,m;
-  while((m=re.exec(lineText)))chords.push({name:m[2],pos:m.index+(m[1]?m[1].length:0)});
-  var text=lineText.replace(/(^|\s)[A-G](?:#|b)?(?:m|maj7|7|sus2|sus4|dim|aug)?(?=\s|$)/g," ").replace(/\s+/g," ").trim();
+  var heading=lineText.replace(/^\[|\]$/g,"").replace(/:$/,"").trim();
+  if(/^(intro|verse(?:\s+\d+)?|chorus|bridge|outro|break|final chorus|pre-chorus|pre chorus)$/i.test(heading)){
+   current={name:heading,lines:[]};sections.push(current);return;
+  }
+  var chords=[],re=/(^|\s)([A-G](?:#|b)?(?:m|maj7|m7|7|6|m6|sus2|sus4|dim|aug|9)?)(?=\s|$)/g,m,out="",cursor=0;
+  while((m=re.exec(lineText))){
+   out+=lineText.slice(cursor,m.index);
+   chords.push({name:m[2],pos:out.replace(/\s+$/,"").length});
+   cursor=m.index+m[0].length;
+  }
+  out+=lineText.slice(cursor);
+  var leading=out.match(/^\s*/)[0].length,text=out.trim();
+  chords=chords.map(function(ch){return {name:ch.name,pos:Math.max(0,Math.min(text.length,ch.pos-leading))};});
   current.lines.push({text:text,chords:chords});
  });
  return sections.filter(function(s){return s.lines.length;});
+}
+function inferredKey(raw){
+ var m=String(raw||"").match(/(^|\s)([A-G](?:#|b)?)(?:m|maj7|m7|7|6|m6|sus2|sus4|dim|aug|9)?(?=\s|$)/);
+ return m?m[2]:"C";
+}
+function renderImportReview(raw,source){
+ var box=document.getElementById("importReview");if(!box)return;
+ var sections=parseImport(raw),chords=0;sections.forEach(function(s){s.lines.forEach(function(l){chords+=l.chords.length;});});
+ var title=source&&source.name?importTitleFromName(source.name):"Imported Song";
+ box.innerHTML='<h2>Review import</h2><p class="sub">Check the extracted text before turning it into an editable song. Chords found: <b>'+chords+'</b>.</p>'+
+  '<div class="importMetaGrid"><label>Song title<input id="reviewTitle" value="'+esc(title)+'"></label><label>Artist<input id="reviewArtist" value=""></label><label>Key<select id="reviewKey">'+["C","C#","D","Eb","E","F","F#","G","Ab","A","Bb","B"].map(function(k){return '<option value="'+k+'">'+k+'</option>';}).join("")+'</select></label></div>'+
+  '<label class="importSourceLabel">Extracted song text<textarea id="reviewText" class="bigText">'+esc(raw)+'</textarea></label>'+
+  '<div class="importReviewActions"><button id="reviewBack" class="btn">Back</button><button id="createImportedSong" class="primary">Create editable song</button></div>'+
+  '<p class="muted importSourceNote">Source: '+esc(source&&source.name||"Pasted text")+'</p>';
+ document.getElementById("reviewKey").value=inferredKey(raw);
+ document.getElementById("reviewBack").onclick=function(){box.classList.add("hidden");};
+ document.getElementById("createImportedSong").onclick=function(){
+  var text=(document.getElementById("reviewText").value||"").trim();if(!text){alert("There is no song text to import yet.");return;}
+  var id=uid("song"),title=(document.getElementById("reviewTitle").value||"Imported Song").trim()||"Imported Song",artist=(document.getElementById("reviewArtist").value||"").trim(),sourceInfo=clone(source||{type:"Imported text"});
+  sourceInfo.originalText=text;
+  state.session.songId=null;state.session.view="song";state.session.edit=true;
+  state.session.draft={id:id,title:title,artist:artist,key:document.getElementById("reviewKey").value||"C",genre:"",moods:[],duration:180,source:sourceInfo,sections:parseImport(text),substitutions:{}};
+  state.session.draftNew=true;state.pendingFile=null;save();render();
+ };
+ box.classList.remove("hidden");box.scrollIntoView({behavior:"smooth",block:"start"});
+}
+async function reviewImport(){
+ var fileInput=document.getElementById("importFile"),file=fileInput&&fileInput.files&&fileInput.files[0],pasted=(document.getElementById("importText").value||"").trim(),status=document.getElementById("importStatus"),box=document.getElementById("importReview");
+ if(!file&&!pasted){alert("Choose a file or paste the song first.");return;}
+ var source=file?{type:file.type==="application/pdf"?"PDF":file.type.indexOf("image/")===0?"Image":"Text",name:file.name,mimeType:file.type,size:file.size}:{type:"Imported text",name:"Pasted text"};
+ try{
+  if(status)status.textContent=file?"Reading "+file.name+"…":"Reading pasted song…";
+  var raw=file?(file.type==="application/pdf"?await loadPdfText(file):file.type.indexOf("image/")===0?await ocrImage(file,function(msg){if(status)status.textContent="OCR: "+msg;}):await file.text()):pasted;
+  if(file&&file.type==="application/pdf"&&!raw)raw=await ocrPdf(file,function(msg){if(status)status.textContent="OCR: "+msg;});
+  if(!String(raw||"").trim())throw new Error("No readable text was found in this source.");
+  renderImportReview(raw,source);if(status)status.textContent="Ready to review: "+source.name;
+ }catch(err){
+  console.error(err);if(box)box.classList.add("hidden");if(status)status.textContent="Import could not be read.";
+  alert("I couldn't read that source. You can try a clearer image/PDF or paste the song text instead.");
+ }
 }
 function openLibrary(){
  if(state.session.edit&&!state.session.draftNew){cancelEdit();return;}
@@ -839,7 +949,11 @@ document.getElementById("exitPerformance").onclick=function(){state.session.view
 document.getElementById("performanceEdit").onclick=function(){state.session.view="setEditor";save();render();};
 document.getElementById("prevSong").onclick=function(){state.session.index=Math.max(0,state.session.index-1);save();renderPerformance();};
 document.getElementById("nextSong").onclick=function(){var set=state.sets[state.session.setId];state.session.index=Math.min(set.songIds.length-1,state.session.index+1);save();renderPerformance();};
-document.getElementById("parseImport").onclick=function(){var raw=document.getElementById("importText").value.trim();if(!raw)return;var id=uid("song"),sections=parseImport(raw);state.session.songId=null;state.session.view="song";state.session.edit=true;state.session.draft={id:id,title:"Imported Song",artist:"Imported",key:"C",genre:"",moods:[],duration:180,source:{type:"Imported text"},sections:sections};state.session.draftNew=true;save();render();};
-document.getElementById("importFile").onchange=function(e){var f=e.target.files[0];if(!f)return;state.pendingFile={name:f.name,type:f.type,size:f.size};save();renderImport();if(f.type.indexOf("text/")===0){var reader=new FileReader();reader.onload=function(){document.getElementById("importText").value=reader.result;};reader.readAsText(f);}};
+document.getElementById("parseImport").onclick=reviewImport;
+document.getElementById("importFile").onchange=function(e){
+ var f=e.target.files[0];if(!f)return;
+ state.pendingFile={name:f.name,type:f.type,size:f.size};save();renderImport();
+ if(f.type.indexOf("text/")===0){var reader=new FileReader();reader.onload=function(){document.getElementById("importText").value=reader.result;};reader.readAsText(f);}
+};
 render();
 })();
