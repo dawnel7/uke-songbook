@@ -846,7 +846,7 @@ function pdfTextLooksUsable(raw){
  var asciiRatio=printable?ascii/printable:0,wordLike=(text.match(/\b[A-Za-z]{2,}\b/g)||[]).length;
  return replacement===0&&bad===0&&letters>=Math.max(20,Math.floor(text.length*.18))&&symbols<Math.max(3,Math.floor(text.length*.03))&&asciiRatio>.88&&wordLike>=5;
 }
-function loadOcrWorker(progress){
+async function loadOcrWorker(progress){
  await loadExternalScript("https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/tesseract.min.js",function(){return !!window.Tesseract;});
  return window.Tesseract.createWorker("eng",1,{workerPath:"https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/worker.min.js",logger:function(m){
   if(progress&&m&&m.status)progress(m.status+(m.progress!=null?" "+Math.round(m.progress*100)+"%":""));
