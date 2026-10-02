@@ -832,8 +832,19 @@ async function loadPdfText(file){
  await loadExternalScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",function(){return !!window.pdfjsLib;});
  window.pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
  var pdf=await window.pdfjsLib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise,pages=[];
- for(var i=1;i<=pdf.numPages;i++){var page=await pdf.getPage(i),content=await page.getTextContent();pages.push(pdfItemsToLines(content.items));}
+ for(var i=1;i<=pdf.numPages;i++){
+  var page=await pdf.getPage(i),content=await page.getTextContent();
+  pages.push(pdfItemsToLines(content.items));
+ }
  return pages.join("\n\n").trim();
+}
+function pdfTextLooksUsable(raw){
+ var text=String(raw||"").trim();if(!text)return false;
+ var replacement=(text.match(/�/g)||[]).length;
+ var bad=(text.match(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g)||[]).length;
+ var letters=(text.match(/[A-Za-z0-9]/g)||[]).length;
+ var symbols=(text.match(/[�□]/g)||[]).length;
+ return replacement===0&&bad===0&&letters>=Math.max(20,Math.floor(text.length*.18))&&symbols<Math.max(3,Math.floor(text.length*.03));
 }
 async function loadOcrWorker(progress){
  await loadExternalScript("https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/tesseract.min.js",function(){return !!window.Tesseract;});
@@ -890,8 +901,9 @@ function renderImportReview(raw,source){
  var box=document.getElementById("importReview");if(!box)return;
  var sections=parseImport(raw),chords=0;sections.forEach(function(s){s.lines.forEach(function(l){chords+=l.chords.length;});});
  var title=source&&source.name?importTitleFromName(source.name):"Imported Song";
+ if(source&&source.name&&/\s+by\s+/i.test(title))title=title.replace(/\s+by\s+.*/i,"").trim()||title;
  box.innerHTML='<h2>Review import</h2><p class="sub">Check the extracted text before turning it into an editable song. Chords found: <b>'+chords+'</b>.</p>'+
-  '<div class="importMetaGrid"><label>Song title<input id="reviewTitle" value="'+esc(title)+'"></label><label>Artist<input id="reviewArtist" value=""></label><label>Key<select id="reviewKey">'+["C","C#","D","Eb","E","F","F#","G","Ab","A","Bb","B"].map(function(k){return '<option value="'+k+'">'+k+'</option>';}).join("")+'</select></label></div>'+
+  '<div class="importMetaGrid"><label>Song title<input id="reviewTitle" value="'+esc(title)+'"></label><label>Artist<input id="reviewArtist" value="'+esc(source&&source.name&&/\s+by\s+/i.test(importTitleFromName(source.name))?importTitleFromName(source.name).replace(/^.*?\s+by\s+/i,"").trim():"")+'"></label><label>Key<select id="reviewKey">'+["C","C#","D","Eb","E","F","F#","G","Ab","A","Bb","B"].map(function(k){return '<option value="'+k+'">'+k+'</option>';}).join("")+'</select></label></div>'+
   '<label class="importSourceLabel">Extracted song text<textarea id="reviewText" class="bigText">'+esc(raw)+'</textarea></label>'+
   '<div class="importReviewActions"><button id="reviewBack" class="btn">Back</button><button id="createImportedSong" class="primary">Create editable song</button></div>'+
   '<p class="muted importSourceNote">Source: '+esc(source&&source.name||"Pasted text")+'</p>';
@@ -914,7 +926,10 @@ async function reviewImport(){
  try{
   if(status)status.textContent=file?"Reading "+file.name+"…":"Reading pasted song…";
   var raw=file?(file.type==="application/pdf"?await loadPdfText(file):file.type.indexOf("image/")===0?await ocrImage(file,function(msg){if(status)status.textContent="OCR: "+msg;}):await file.text()):pasted;
-  if(file&&file.type==="application/pdf"&&!raw)raw=await ocrPdf(file,function(msg){if(status)status.textContent="OCR: "+msg;});
+  if(file&&file.type==="application/pdf"&&!pdfTextLooksUsable(raw)){
+   if(status)status.textContent="PDF text encoding looks unreadable. Switching to OCR…";
+   raw=await ocrPdf(file,function(msg){if(status)status.textContent="OCR: "+msg;});
+  }
   if(!String(raw||"").trim())throw new Error("No readable text was found in this source.");
   renderImportReview(raw,source);if(status)status.textContent="Ready to review: "+source.name;
  }catch(err){
