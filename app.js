@@ -793,24 +793,41 @@ function bindEditActions(){
  var r=document.getElementById("restoreOriginal");if(r)r.onclick=restoreOriginal;
 }
 function renderSets(){
- var h="";Object.values(state.sets).forEach(function(set){var seconds=set.songIds.reduce(function(a,id){return a+(state.songs[id]?state.songs[id].duration:0);},0);h+='<div class="card setCard"><h2>'+esc(set.name)+'</h2><p class="muted">'+set.songIds.length+" songs · "+Math.round(seconds/60)+' min</p><button class="primary" data-set-open="'+set.id+'">Open set</button></div>';});
+ var h="";
+ Object.values(state.sets).forEach(function(set){
+  var seconds=set.songIds.reduce(function(a,id){return a+(state.songs[id]?state.songs[id].duration:0);},0);
+  h+='<div class="card setCard"><h2>'+esc(set.name)+'</h2><p class="muted">'+set.songIds.length+" songs · "+Math.round(seconds/60)+' min</p><div class="setCardActions"><button class="primary" data-set-open="'+esc(set.id)+'">Open set</button><button class="btn" data-set-delete="'+esc(set.id)+'">Delete</button></div></div>';
+ });
  document.getElementById("setsList").innerHTML=h||'<div class="card empty">No setlists yet. Create one to start arranging songs.</div>';
  document.querySelectorAll("[data-set-open]").forEach(function(b){b.onclick=function(){openSet(b.getAttribute("data-set-open"));};});
+ document.querySelectorAll("[data-set-delete]").forEach(function(b){b.onclick=function(){var id=b.getAttribute("data-set-delete");var set=state.sets[id];if(!set)return;if(window.confirm('Delete the setlist "'+set.name+'"? This cannot be undone.')){delete state.sets[id];if(state.session.setId===id)state.session.setId=null;save();renderSets();}};});
 }
 function openSet(id){state.session.view="setEditor";state.session.setId=id;save();render();}
 function renderSetEditor(){
  var set=state.sets[state.session.setId];if(!set){state.session.view="sets";return render();}
  var seconds=set.songIds.reduce(function(a,id){return a+(state.songs[id]?state.songs[id].duration:0);},0);
- document.getElementById("setTitle").value=set.name;document.getElementById("setSummary").textContent=set.songIds.length+" songs · "+Math.round(seconds/60)+" min";
- var q=(document.getElementById("setSearch").value||"").toLowerCase(),lib="";
- Object.values(state.songs).forEach(function(s){var genres=splitTags(s.genre).map(function(g){return g.toLowerCase();});if(q&&genres.every(function(g){return g.indexOf(q)<0;})&&String(s.genre||"").toLowerCase().indexOf(q)<0)return;lib+='<div class="checkRow"><button class="btn" data-add-set="'+s.id+'">'+(set.songIds.indexOf(s.id)>=0?"✓ Added":"+ Add")+'</button><span><b>'+esc(s.title)+'</b><br><span class="muted">'+esc(s.artist)+'</span><br><span class="muted">'+esc(s.genre||"No genre")+'</span></span></div>';});
- document.getElementById("setLibrary").innerHTML=lib;
- var order="";set.songIds.forEach(function(id,i){var s=state.songs[id];if(s)order+='<div class="setSongRow" draggable="true" data-order="'+i+'"><span class="drag">☷</span><span><b>'+esc(s.title)+'</b><br><span class="muted">'+Math.round(s.duration/60)+' min</span></span><button class="remove" data-remove-set="'+id+'">×</button></div>';});
+ document.getElementById("setTitle").value=set.name;
+ document.getElementById("setSummary").textContent=set.songIds.length+" songs · "+Math.round(seconds/60)+" min";
+ var q=(document.getElementById("setSearch").value||"").trim().toLowerCase();
+ var genre=(document.getElementById("setGenre").value||"").toLowerCase();
+ var lib="";
+ Object.values(state.songs).forEach(function(song){
+  var title=String(song.title||"").toLowerCase();
+  var matchesTitle=!q||title.indexOf(q)>=0;
+  var matchesGenre=!genre||splitTags(song.genre).some(function(g){return g.toLowerCase()===genre;});
+  if(!matchesTitle||!matchesGenre)return;
+  lib+='<div class="checkRow"><button class="btn" data-add-set="'+esc(song.id)+'">'+(set.songIds.indexOf(song.id)>=0?"✓ Added":"+ Add")+'</button><span><b>'+esc(song.title)+'</b><br><span class="muted">'+esc(song.artist)+'</span><br><span class="muted">'+esc(song.genre||"No genre")+'</span></span></div>';
+ });
+ document.getElementById("setLibrary").innerHTML=lib||'<div class="empty">No songs match your search/filter.</div>';
+ var order="";set.songIds.forEach(function(id,i){var song=state.songs[id];if(song)order+='<div class="setSongRow" draggable="true" data-order="'+i+'"><span class="drag">☷</span><span><b>'+esc(song.title)+'</b><br><span class="muted">'+Math.round(song.duration/60)+' min</span></span><button class="remove" data-remove-set="'+id+'">×</button></div>';});
  document.getElementById("setSongs").innerHTML=order||'<div class="empty">Add songs above.</div>';bindSet();
 }
 function bindSet(){
- document.querySelectorAll("[data-add-set]").forEach(function(b){b.onclick=function(){var set=state.sets[state.session.setId],id=b.getAttribute("data-add-set");if(set.songIds.indexOf(id)<0)set.songIds.push(id);save();renderSetEditor();};});
- document.querySelectorAll("[data-remove-set]").forEach(function(b){b.onclick=function(){var set=state.sets[state.session.setId],id=b.getAttribute("data-remove-set");set.songIds=set.songIds.filter(function(x){return x!==id;});save();renderSetEditor();};});
+ var title=document.getElementById("setTitle");
+ if(title)title.oninput=function(){var set=state.sets[state.session.setId];if(set){set.name=title.value.trim()||"Untitled Set";save();}};
+ var search=document.getElementById("setSearch");if(search)search.oninput=renderSetEditor;
+ var genre=document.getElementById("setGenre");if(genre)genre.onchange=renderSetEditor;
+ document.querySelectorAll("[data-add-set]").forEach(function(b){b.onclick=function(){var set=state.sets[state.session.setId],id=b.getAttribute("data-remove-set");set.songIds=set.songIds.filter(function(x){return x!==id;});save();renderSetEditor();};});
  var dragged=null;document.querySelectorAll("[data-order]").forEach(function(row){row.ondragstart=function(){dragged=Number(row.getAttribute("data-order"));};row.ondragover=function(e){e.preventDefault();};row.ondrop=function(){var set=state.sets[state.session.setId],target=Number(row.getAttribute("data-order")),x=set.songIds.splice(dragged,1)[0];set.songIds.splice(target,0,x);save();renderSetEditor();};});
 }
 function renderPerformance(){
@@ -1007,7 +1024,7 @@ document.getElementById("key").onchange=function(e){state.settings.shift=pitchIn
 document.getElementById("newSong").onclick=openNewSong;
 document.getElementById("newSet").onclick=function(){var id=uid("set");state.sets[id]={id:id,name:"New Set",songIds:[]};openSet(id);};
 document.getElementById("setDone").onclick=function(){state.session.view="sets";save();render();};
-document.getElementById("setSearch").oninput=renderSetEditor;
+
 document.getElementById("performSet").onclick=function(){state.session.index=0;state.session.view="performance";save();render();};
 document.getElementById("exitPerformance").onclick=function(){state.session.view="setEditor";save();render();};
 document.getElementById("performanceEdit").onclick=function(){state.session.view="setEditor";save();render();};
