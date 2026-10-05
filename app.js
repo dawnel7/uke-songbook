@@ -813,7 +813,8 @@ function renderSetEditor(){
  var lib="";
  Object.values(state.songs).forEach(function(song){
   var title=String(song.title||"").toLowerCase();
-  var matchesTitle=!q||title.indexOf(q)>=0;
+  var artist=String(song.artist||"").toLowerCase();
+  var matchesTitle=!q||title.indexOf(q)>=0||artist.indexOf(q)>=0;
   var matchesGenre=!genre||splitTags(song.genre).some(function(g){return g.toLowerCase()===genre;});
   if(!matchesTitle||!matchesGenre)return;
   lib+='<div class="checkRow"><button class="btn" data-add-set="'+esc(song.id)+'">'+(set.songIds.indexOf(song.id)>=0?"✓ Added":"+ Add")+'</button><span><b>'+esc(song.title)+'</b><br><span class="muted">'+esc(song.artist)+'</span><br><span class="muted">'+esc(song.genre||"No genre")+'</span></span></div>';
