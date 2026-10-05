@@ -70,13 +70,14 @@ function makeSong(){
   ]}
  ]};
 }
-function fresh(){return {songs:{hallelujah:makeSong()},sets:{},settings:{instrument:"baritone",shift:0,view:"scroll",pin:true},session:{view:"library",songId:null,setId:null,edit:false,draft:null,draftNew:false,index:0},pendingFile:null};}
+function fresh(){return {songs:{hallelujah:makeSong()},sets:{},settings:{instrument:"baritone",shift:0,view:"scroll",pin:true},session:{view:"library",songId:null,setId:null,edit:false,draft:null,draftNew:false,index:0,genreFilter:""},pendingFile:null};}
 var state;
 try{state=JSON.parse(localStorage.getItem(STORAGE));}catch(e){state=null;}
 if(!state||!state.songs)state=fresh();
 if(!state.session)state=fresh();
 if(!state.settings)state=fresh().settings;
 if(state.settings.autoScroll==null)state.settings.autoScroll=0;
+if(state.session.genreFilter==null)state.session.genreFilter="";
 if(!state.songs||Object.keys(state.songs).length===0){state.songs={hallelujah:makeSong()};}
 if(!state.songs.hallelujah){state.songs.hallelujah=makeSong();}
 Object.keys(state.songs).forEach(function(id){if(!state.songs[id].substitutions)state.songs[id].substitutions={};});
@@ -270,12 +271,27 @@ function render(){
 }
 function renderLibrary(){
  var q=(document.getElementById("search").value||"").toLowerCase();
- var arr=Object.values(state.songs).filter(function(s){return (s.title+" "+s.artist+" "+s.genre).toLowerCase().indexOf(q)>=0;});
- var html="";
- arr.forEach(function(s){var tags=splitTags(s.genre).map(function(g){return '<span class="tag">'+esc(g)+'</span>';}).join("");html+='<div class="songRow"><div class="songInfo"><button data-open="'+esc(s.id)+'"><div class="songName">'+esc(s.title)+'</div><div class="songMeta">'+esc(s.artist)+' · Key of '+esc(transpose(s.key,state.settings.shift))+' · '+Math.round(s.duration/60)+' min</div><div class="tags">'+tags+'</div></button></div><button class="btn" data-edit="'+esc(s.id)+'">Edit</button></div>';});
- document.getElementById("libraryList").innerHTML=html||'<div class="empty">No songs found.</div>';
- document.querySelectorAll("[data-open]").forEach(function(b){b.onclick=function(){openSong(b.getAttribute("data-open"),false);};});
- document.querySelectorAll("[data-edit]").forEach(function(b){b.onclick=function(){openSong(b.getAttribute("data-edit"),true);};});
+ var filter=state.session.genreFilter||"";
+ var arr=Object.values(state.songs).filter(function(s){
+  var text=(s.title+" "+s.artist+" "+s.genre).toLowerCase();
+  var genres=splitTags(s.genre);
+  return text.indexOf(q)>=0 && (!filter||genres.some(function(g){return g.toLowerCase()===filter.toLowerCase();}));
+ });
+ var allGenres={};
+ Object.values(state.songs).forEach(function(s){splitTags(s.genre).forEach(function(g){if(g)allGenres[g]=true;});});
+ var genreNames=Object.keys(allGenres).sort(function(a,b){return a.localeCompare(b);});
+ var filters='<div class="genreFilterBar"><span class="genreFilterLabel">Filter by genre:</span><button class="genreFilterChip '+(!filter?"active":"")+'" data-genre-filter="">All</button>';
+ genreNames.forEach(function(g){filters+='<button class="genreFilterChip '+(filter.toLowerCase()===g.toLowerCase()?"active":"")+'" data-genre-filter="'+esc(g)+'">'+esc(g)+'</button>';});
+ filters+='</div>';
+ var html=filters;
+ arr.forEach(function(song){
+  var tags=splitTags(song.genre).map(function(g){return '<button class="tag genreTag" data-genre-filter="'+esc(g)+'">'+esc(g)+'</button>';}).join("");
+  html+='<div class="songRow"><div class="songInfo"><button data-open="'+esc(song.id)+'"><div class="songName">'+esc(song.title)+'</div><div class="songMeta">'+esc(song.artist)+' · Key of '+esc(transpose(song.key,state.settings.shift))+' · '+Math.round(song.duration/60)+' min</div></button><div class="tags">'+tags+'</div></div><button class="btn" data-edit="'+esc(song.id)+'">Edit</button></div>';
+ });
+ document.getElementById("libraryList").innerHTML=html;
+ document.querySelectorAll("[data-open]").forEach(function(btn){btn.onclick=function(){openSong(btn.getAttribute("data-open"),false);};});
+ document.querySelectorAll("[data-edit]").forEach(function(btn){btn.onclick=function(){openSong(btn.getAttribute("data-edit"),true);};});
+ document.querySelectorAll("[data-genre-filter]").forEach(function(btn){btn.onclick=function(e){e.preventDefault();e.stopPropagation();state.session.genreFilter=btn.getAttribute("data-genre-filter")||"";save();renderLibrary();};});
 }
 function openSong(id,edit){
  state.session.songId=id;state.session.view="song";state.session.edit=!!edit;state.session.draft=edit?clone(state.songs[id]):null;state.session.draftNew=false;save();render();
