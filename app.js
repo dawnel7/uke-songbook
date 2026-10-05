@@ -270,9 +270,9 @@ function render(){
 }
 function renderLibrary(){
  var q=(document.getElementById("search").value||"").toLowerCase();
- var arr=Object.values(state.songs).filter(function(s){return (s.title+" "+s.artist+" "+s.genre+" "+s.moods.join(" ")).toLowerCase().indexOf(q)>=0;});
+ var arr=Object.values(state.songs).filter(function(s){return (s.title+" "+s.artist+" "+s.genre).toLowerCase().indexOf(q)>=0;});
  var html="";
- arr.forEach(function(s){var tags=s.moods.map(function(m){return '<span class="tag">'+esc(m)+'</span>';}).join("");html+='<div class="songRow"><div class="songInfo"><button data-open="'+esc(s.id)+'"><div class="songName">'+esc(s.title)+'</div><div class="songMeta">'+esc(s.artist)+' · Key of '+esc(transpose(s.key,state.settings.shift))+' · '+Math.round(s.duration/60)+' min</div><div class="tags">'+tags+'</div></button></div><button class="btn" data-edit="'+esc(s.id)+'">Edit</button></div>';});
+ arr.forEach(function(s){var tags=splitTags(s.genre).map(function(g){return '<span class="tag">'+esc(g)+'</span>';}).join("");html+='<div class="songRow"><div class="songInfo"><button data-open="'+esc(s.id)+'"><div class="songName">'+esc(s.title)+'</div><div class="songMeta">'+esc(s.artist)+' · Key of '+esc(transpose(s.key,state.settings.shift))+' · '+Math.round(s.duration/60)+' min</div><div class="tags">'+tags+'</div></button></div><button class="btn" data-edit="'+esc(s.id)+'">Edit</button></div>';});
  document.getElementById("libraryList").innerHTML=html||'<div class="empty">No songs found.</div>';
  document.querySelectorAll("[data-open]").forEach(function(b){b.onclick=function(){openSong(b.getAttribute("data-open"),false);};});
  document.querySelectorAll("[data-edit]").forEach(function(b){b.onclick=function(){openSong(b.getAttribute("data-edit"),true);};});
@@ -290,7 +290,7 @@ function renderSong(){
  var s=currentSong();if(!s){state.session.view="library";return render();}
  document.getElementById("songTitle").textContent=s.title||"Untitled Song";
  document.getElementById("songMeta").textContent=s.artist||"New song";
- document.getElementById("songDetails").textContent="Key of "+transpose(s.key,state.settings.shift)+" · "+(s.genre||"Genre not set")+" · "+(s.moods||[]).join(" · ")+(s.duration?" · "+Math.round(s.duration/60)+" min":"");
+ document.getElementById("songDetails").textContent="Key of "+transpose(s.key,state.settings.shift)+" · "+(s.genre||"Genre not set")+(s.duration?" · "+Math.round(s.duration/60)+" min":"");
  document.getElementById("instrument").value=state.settings.instrument;
  document.getElementById("viewMode").value=state.settings.view;
  syncAutoScrollControl();
@@ -368,7 +368,7 @@ function renderLyrics(s){
  if(state.session.edit){renderFreeEditor(el,s);}else{var out="";s.sections.forEach(function(sec){out+='<section class="section"><h3>'+esc(sec.name)+"</h3>";sec.lines.forEach(function(l){out+=displayLine(l,s);});out+="</section>";});el.innerHTML=out;}
 }
 function renderFreeEditor(el,s){
- var h='<div class="songMetaEditor"><div><label>Genre / style</label><input id="editGenre" value="'+esc(joinTags(s.genre))+'" placeholder="e.g. Folk, Country, Worship"></div><div><label>Mood</label><input id="editMoods" value="'+esc(joinTags(s.moods))+'" placeholder="e.g. Reflective, Singalong"></div></div>';
+ var h='<div class="songMetaEditor"><div><label>Genre / style</label><input id="editGenre" value="'+esc(joinTags(s.genre))+'" placeholder="e.g. Folk, Country, Worship"></div></div>';
  h+='<div class="wordEditToolbar"><span>Edit the song directly. Chords are editable text too. Select, copy, cut, paste, press Return, or drag a chord.</span><div class="wordEditActions"><button id="undoEditBtn" class="btn" disabled>↶ Undo</button><button id="restoreOriginal" class="btn">Restore Original</button><button id="saveLibrary" class="primary">Save Changes</button><button id="saveCopy" class="btn">Save a Copy</button><button id="cancelEdit" class="btn">Cancel</button><button id="songMenu" class="btn">Delete</button></div></div>';
  h+='<div class="chordSubPanel"><div class="editSubTitle">Chord substitutions</div><div class="muted">Change a chord throughout this song only. Example: F#m → F#m7.</div><div class="chordSubRow"><input id="subFrom" class="chordSubInput" placeholder="Original chord (e.g. F#m)"><span>→</span><input id="subTo" class="chordSubInput" placeholder="Replacement (e.g. F#m7)"><button id="applySubstitution" class="btn">Apply</button></div><div id="substitutionList" class="substitutionList"></div></div>';
  h+='<div class="songDocument" contenteditable="true" spellcheck="true">';
@@ -768,9 +768,8 @@ function deleteSongMenu(){
  if(confirm("Delete \""+s.title+"\" from your library? This cannot be undone.")){delete state.songs[s.id];Object.values(state.sets).forEach(function(set){set.songIds=set.songIds.filter(function(id){return id!==s.id;});});state.session.songId=null;state.session.view="library";save();render();}
 }
 function bindEditActions(){
- var genre=document.getElementById("editGenre"),moods=document.getElementById("editMoods");
+ var genre=document.getElementById("editGenre");
  if(genre)genre.oninput=function(){if(state.session.draft)state.session.draft.genre=genre.value.trim();};
- if(moods)moods.oninput=function(){if(state.session.draft)state.session.draft.moods=splitTags(moods.value);};
  var a=document.getElementById("saveLibrary");if(a)a.onclick=saveLibrary;
  var c=document.getElementById("saveCopy");if(c)c.onclick=saveCopy;
  var x=document.getElementById("cancelEdit");if(x)x.onclick=cancelEdit;
@@ -937,7 +936,7 @@ function renderImportReview(raw,source){
  if(source&&source.name&&/\s+by\s+/i.test(title))title=title.replace(/\s+by\s+.*/i,"").trim()||title;
  box.innerHTML='<h2>Review import</h2><p class="sub">Check the extracted text before turning it into an editable song. Unique chords: <b>'+uniqueChords.length+'</b>.</p>'+
   '<div class="importMetaGrid"><label>Song title<input id="reviewTitle" value="'+esc(title)+'"></label><label>Artist<input id="reviewArtist" value="'+esc(source&&source.name&&/\s+by\s+/i.test(importTitleFromName(source.name))?importTitleFromName(source.name).replace(/^.*?\s+by\s+/i,"").trim():"")+'"></label><label>Key<select id="reviewKey">'+["C","C#","D","Eb","E","F","F#","G","Ab","A","Bb","B"].map(function(k){return '<option value="'+k+'">'+k+'</option>';}).join("")+'</select></label></div>'+
-  '<div class="importMetaGrid songMetaFields"><label>Genre / style<input id="reviewGenre" placeholder="e.g. Folk, Country, Worship"></label><label>Mood<input id="reviewMoods" placeholder="e.g. Reflective, Singalong"></label></div>'+
+  '<div class="importMetaGrid songMetaFields"><label>Genre / style<input id="reviewGenre" placeholder="e.g. Folk, Country, Worship"></label></div>'+
   '<label class="importSourceLabel">Extracted song text<textarea id="reviewText" class="bigText">'+esc(raw)+'</textarea></label>'+
   '<div class="importReviewActions"><button id="reviewBack" class="btn">Back</button><button id="createImportedSong" class="primary">Create editable song</button></div>'+
   '<p class="muted importSourceNote">Source: '+esc(source&&source.name||"Pasted text")+'</p>';
@@ -948,7 +947,7 @@ function renderImportReview(raw,source){
   var id=uid("song"),title=(document.getElementById("reviewTitle").value||"Imported Song").trim()||"Imported Song",artist=(document.getElementById("reviewArtist").value||"").trim(),sourceInfo=clone(source||{type:"Imported text"});
   sourceInfo.originalText=text;
   state.session.songId=null;state.session.view="song";state.session.edit=true;
-  state.session.draft={id:id,title:title,artist:artist,key:document.getElementById("reviewKey").value||"C",genre:(document.getElementById("reviewGenre").value||"").trim(),moods:splitTags(document.getElementById("reviewMoods").value),duration:180,source:sourceInfo,sections:parseImport(text),substitutions:{}};
+  state.session.draft={id:id,title:title,artist:artist,key:document.getElementById("reviewKey").value||"C",genre:(document.getElementById("reviewGenre").value||"").trim(),moods:[],duration:180,source:sourceInfo,sections:parseImport(text),substitutions:{}};
   state.session.draftNew=true;state.pendingFile=null;save();render();
  };
  box.classList.remove("hidden");box.scrollIntoView({behavior:"smooth",block:"start"});
