@@ -97,7 +97,7 @@ function stopAutoScroll(){
  autoScrollRemainder=0;
 }
 function autoScrollStep(ts){
- if(!state.settings||state.settings.view!=="scroll"||state.settings.autoScroll<=0||state.session.view!=="song"||state.session.edit){stopAutoScroll();return;}
+ if(!state.settings||state.settings.view!=="scroll"||state.settings.autoScroll<=0||state.session.view!=="song"&&state.session.view!=="performance"||state.session.edit){stopAutoScroll();return;}
  if(!autoScrollLast)autoScrollLast=ts;
  var dt=Math.min(50,ts-autoScrollLast)/1000;
  autoScrollLast=ts;
@@ -127,7 +127,7 @@ function syncAutoScrollControl(){
   b.disabled=state.settings.view!=="scroll"||state.session.edit;
  });
  var headerAuto=document.getElementById("headerAutoScroll");
- if(headerAuto)headerAuto.classList.toggle("hidden",state.session.view!=="song"||state.session.edit);
+ if(headerAuto)headerAuto.classList.toggle("hidden",(state.session.view!=="song"&&state.session.view!=="performance")||state.session.edit);
 }
 function currentSong(){return state.session.edit?state.session.draft:state.songs[state.session.songId];}
 function transpose(chord,shift){
@@ -254,6 +254,9 @@ function render(){
   if(state.session.view==="song"){
    var brandSong=currentSong();
    headerBrand.textContent=brandSong&&brandSong.title?brandSong.title:"Your Songbook";
+  }else if(state.session.view==="performance"){
+   var pset=state.sets[state.session.setId],pSong=pset&&pset.songIds.length?state.songs[pset.songIds[state.session.index]]:null;
+   headerBrand.textContent=pSong&&pSong.title?pSong.title:"Your Songbook";
   }else{
    headerBrand.textContent="Your Songbook";
   }
@@ -261,7 +264,7 @@ function render(){
  var headerAuto=document.getElementById("headerAutoScroll");
  if(headerAuto)headerAuto.classList.toggle("hidden",state.session.view!=="song"||state.session.edit);
  var headerChords=document.getElementById("headerChordBar");
- if(headerChords)headerChords.classList.toggle("hidden",state.session.view!=="song"||state.session.edit);
+ if(headerChords)headerChords.classList.toggle("hidden",(state.session.view!=="song"&&state.session.view!=="performance")||state.session.edit);
  if(state.session.view==="library")renderLibrary();
  if(state.session.view==="song")renderSong();
  if(state.session.view==="sets")renderSets();
@@ -339,7 +342,7 @@ function renderChords(s){
    var x=transpose(n,state.settings.shift);
    return '<div class="headerChordItem" title="'+esc(x)+'"><div class="headerChordName">'+esc(x)+'</div><div class="headerChordDiagram">'+fretDiagram(x)+'</div></div>';
   }).join("");
-  header.classList.toggle("hidden",!state.settings.pin||state.session.view!=="song"||state.session.edit);
+  header.classList.toggle("hidden",!state.settings.pin||(state.session.view!=="song"&&state.session.view!=="performance")||state.session.edit);
  }
 
  el.classList.toggle("hidden",!!state.settings.pin);
@@ -833,11 +836,15 @@ function bindSet(){
 }
 function renderPerformance(){
  var set=state.sets[state.session.setId];if(!set||!set.songIds.length){state.session.view="setEditor";return render();}
+ stopAutoScroll();
  var i=Math.max(0,Math.min(state.session.index,set.songIds.length-1));state.session.index=i;var s=state.songs[set.songIds[i]];
  document.getElementById("performanceCount").textContent=(i+1)+" / "+set.songIds.length;
  var html='<div class="card"><div class="eyebrow">'+esc(set.name)+'</div><h1>'+esc(s.title)+'</h1><p class="sub">'+esc(s.artist)+' · Key of '+esc(transpose(s.key,state.settings.shift))+'</p></div><div class="card lyrics">';
- s.sections.forEach(function(sec){html+='<section class="section"><h3>'+esc(sec.name)+"</h3>";sec.lines.forEach(function(l){html+=displayLine(l);});html+="</section>";});
+ s.sections.forEach(function(sec){html+='<section class="section"><h3>'+esc(sec.name)+"</h3>";sec.lines.forEach(function(l){html+=displayLine(l,s);});html+="</section>";});
  document.getElementById("performanceSong").innerHTML=html+"</div>";
+ renderChords(s);
+ syncAutoScrollControl();
+ if(state.settings.autoScroll>0)startAutoScroll();
 }
 function renderImport(){
  var status=document.getElementById("importStatus");
