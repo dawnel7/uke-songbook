@@ -809,7 +809,7 @@ function renderSetEditor(){
  document.getElementById("setTitle").value=set.name;
  document.getElementById("setSummary").textContent=set.songIds.length+" songs · "+Math.round(seconds/60)+" min";
  var q=(document.getElementById("setSearch").value||"").trim().toLowerCase();
- var genre=(document.getElementById("setGenre").value||"").toLowerCase();
+ var genreSelect=document.getElementById("setGenre");var currentGenre=genreSelect?genreSelect.value:"";if(genreSelect){var genreMap={};Object.values(state.songs).forEach(function(song){splitTags(song.genre).forEach(function(g){if(g)genreMap[g]=true;});});var opts="<option value=\"\">All genres</option>";Object.keys(genreMap).sort(function(a,b){return a.localeCompare(b);}).forEach(function(g){opts+="<option value=\""+esc(g)+"\""+(currentGenre.toLowerCase()===g.toLowerCase()?" selected":"")+">"+esc(g)+"</option>";});genreSelect.innerHTML=opts;}var genre=currentGenre.toLowerCase();
  var lib="";
  Object.values(state.songs).forEach(function(song){
   var title=String(song.title||"").toLowerCase();
