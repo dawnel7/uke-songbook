@@ -801,9 +801,9 @@ function openSet(id){state.session.view="setEditor";state.session.setId=id;save(
 function renderSetEditor(){
  var set=state.sets[state.session.setId];if(!set){state.session.view="sets";return render();}
  var seconds=set.songIds.reduce(function(a,id){return a+(state.songs[id]?state.songs[id].duration:0);},0);
- document.getElementById("setTitle").textContent=set.name;document.getElementById("setSummary").textContent=set.songIds.length+" songs · "+Math.round(seconds/60)+" min";
+ document.getElementById("setTitle").value=set.name;document.getElementById("setSummary").textContent=set.songIds.length+" songs · "+Math.round(seconds/60)+" min";
  var q=(document.getElementById("setSearch").value||"").toLowerCase(),lib="";
- Object.values(state.songs).forEach(function(s){if((s.title+" "+s.artist).toLowerCase().indexOf(q)<0)return;lib+='<div class="checkRow"><button class="btn" data-add-set="'+s.id+'">'+(set.songIds.indexOf(s.id)>=0?"✓ Added":"+ Add")+'</button><span><b>'+esc(s.title)+'</b><br><span class="muted">'+esc(s.artist)+'</span></span></div>';});
+ Object.values(state.songs).forEach(function(s){var genres=splitTags(s.genre).map(function(g){return g.toLowerCase();});if(q&&genres.every(function(g){return g.indexOf(q)<0;})&&String(s.genre||"").toLowerCase().indexOf(q)<0)return;lib+='<div class="checkRow"><button class="btn" data-add-set="'+s.id+'">'+(set.songIds.indexOf(s.id)>=0?"✓ Added":"+ Add")+'</button><span><b>'+esc(s.title)+'</b><br><span class="muted">'+esc(s.artist)+'</span><br><span class="muted">'+esc(s.genre||"No genre")+'</span></span></div>';});
  document.getElementById("setLibrary").innerHTML=lib;
  var order="";set.songIds.forEach(function(id,i){var s=state.songs[id];if(s)order+='<div class="setSongRow" draggable="true" data-order="'+i+'"><span class="drag">☷</span><span><b>'+esc(s.title)+'</b><br><span class="muted">'+Math.round(s.duration/60)+' min</span></span><button class="remove" data-remove-set="'+id+'">×</button></div>';});
  document.getElementById("setSongs").innerHTML=order||'<div class="empty">Add songs above.</div>';bindSet();
